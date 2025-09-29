@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>إنشاء حساب - SDTORA</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+    <script src="firebase-config.js"></script>
+    <style>
+        .auth-container {
+            max-width: 400px;
+            margin: 50px auto;
+            padding: 40px;
+            background: var(--win-glass);
+            border-radius: var(--win-radius-lg);
+            border: 1px solid var(--win-glass-border);
+            backdrop-filter: blur(20px);
+        }
+        
+        .auth-form {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+        
+        .auth-input {
+            padding: 15px;
+            border-radius: var(--win-radius);
+            border: 1px solid var(--win-border);
+            background: rgba(255,255,255,0.1);
+            color: var(--win-text);
+            font-size: 16px;
+            width: 100%;
+            box-sizing: border-box;
+        }
+        
+        .auth-input:focus {
+            outline: none;
+            border-color: var(--win-accent-light);
+        }
+    </style>
+</head>
+<body>
+    <div class="auth-container">
+        <h2 style="text-align: center; margin-bottom: 30px;">إنشاء حساب جديد</h2>
+        
+        <form class="auth-form" id="registerForm">
+            <input type="text" class="auth-input" placeholder="الاسم الكامل" id="fullName" required>
+            <input type="email" class="auth-input" placeholder="البريد الإلكتروني" id="email" required>
+            <input type="password" class="auth-input" placeholder="كلمة المرور (6 أحرف على الأقل)" id="password" minlength="6" required>
+            <button type="submit" class="btn btn-primary">إنشاء حساب</button>
+        </form>
+        
+        <div id="message" style="margin-top: 20px; text-align: center;"></div>
+        
+        <p style="text-align: center; margin-top: 20px;">
+            لديك حساب بالفعل؟ <a href="auth.html" style="color: var(--win-accent-light);">سجل الدخول</a>
+        </p>
+    </div>
+
+    <script>
+        document.getElementById('registerForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const fullName = document.getElementById('fullName').value;
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            const messageDiv = document.getElementById('message');
+            
+            // إظهار تحميل
+            messageDiv.innerHTML = '<p style="color: #FF9800;">⏳ جاري إنشاء الحساب...</p>';
+            
+            firebase.auth().createUserWithEmailAndPassword(email, password)
+                .then((userCredential) => {
+                    // تم إنشاء المستخدم بنجاح
+                    const user = userCredential.user;
+                    
+                    // حفظ بيانات إضافية في Firestore
+                    return db.collection('users').doc(user.uid).set({
+                        fullName: fullName,
+                        email: email,
+                        createdAt: firebase.firestore.FieldValue.serverTimestamp()
+                    });
+                })
+                .then(() => {
+                    messageDiv.innerHTML = '<p style="color: #4CAF50;">✅ تم إنشاء الحساب بنجاح! يتم توجيهك...</p>';
+                    setTimeout(() => {
+                        window.location.href = 'wallet.html';
+                    }, 2000);
+                })
+                .catch((error) => {
+                    let errorMessage = 'حدث خطأ غير معروف';
+                    
+                    switch(error.code) {
+                        case 'auth/email-already-in-use':
+                            errorMessage = 'هذا البريد الإلكتروني مستخدم بالفعل';
+                            break;
+                        case 'auth/invalid-email':
+                            errorMessage = 'البريد الإلكتروني غير صحيح';
+                            break;
+                        case 'auth/weak-password':
+                            errorMessage = 'كلمة المرور ضعيفة (يجب أن تكون 6 أحرف على الأقل)';
+                            break;
+                        default:
+                            errorMessage = error.message;
+                    }
+                    
+                    messageDiv.innerHTML = `<p style="color: #f44336;">❌ ${errorMessage}</p>`;
+                });
+        });
+    </script>
+</body>
+</html>

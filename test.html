@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>اختبار Firebase - SDTORA</title>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+    <script src="firebase-config.js"></script>
+    <style>
+        body { 
+            font-family: Arial, sans-serif; 
+            text-align: center; 
+            padding: 50px; 
+            background: #1a1a1a; 
+            color: white; 
+        }
+        .btn { 
+            padding: 15px 30px; 
+            margin: 10px; 
+            border: none; 
+            border-radius: 8px; 
+            cursor: pointer; 
+            font-size: 16px; 
+        }
+        .success { background: #4CAF50; color: white; }
+        .error { background: #f44336; color: white; }
+        .info { background: #2196F3; color: white; }
+    </style>
+</head>
+<body>
+    <h1>🧪 اختبار اتصال Firebase</h1>
+    
+    <div id="status">
+        <p>جاري التحقق من اتصال Firebase...</p>
+    </div>
+
+    <button class="btn info" onclick="testFirebase()">اختبار Firebase</button>
+    <button class="btn success" onclick="testAuth()">اختبار التسجيل</button>
+    <button class="btn info" onclick="testFirestore()">اختبار قاعدة البيانات</button>
+
+    <div id="result" style="margin-top: 30px; padding: 20px; background: #2d2d2d; border-radius: 8px;"></div>
+
+    <script>
+        function testFirebase() {
+            const result = document.getElementById('result');
+            try {
+                if (typeof firebase !== 'undefined' && firebase.apps.length > 0) {
+                    result.innerHTML = '<p style="color: #4CAF50;">✅ Firebase يعمل بنجاح!</p>';
+                    result.innerHTML += `<p>اسم التطبيق: ${firebase.app().name}</p>`;
+                    result.innerHTML += `<p>مشروع: ${firebaseConfig.projectId}</p>`;
+                } else {
+                    result.innerHTML = '<p style="color: #f44336;">❌ Firebase غير مهيأ</p>';
+                }
+            } catch (error) {
+                result.innerHTML = `<p style="color: #f44336;">❌ خطأ: ${error.message}</p>`;
+            }
+        }
+
+        function testAuth() {
+            const result = document.getElementById('result');
+            const email = 'test@example.com';
+            const password = '123456';
+            
+            firebase.auth().createUserWithEmailAndPassword(email, password)
+                .then((userCredential) => {
+                    result.innerHTML = '<p style="color: #4CAF50;">✅ تم إنشاء المستخدم بنجاح!</p>';
+                    result.innerHTML += `<p>User ID: ${userCredential.user.uid}</p>`;
+                    
+                    // حذف المستخدم للاختبار فقط
+                    userCredential.user.delete();
+                })
+                .catch((error) => {
+                    if (error.code === 'auth/email-already-in-use') {
+                        result.innerHTML = '<p style="color: #FF9800;">⚠️ البريد الإلكتروني مستخدم بالفعل - جرب تسجيل الدخول</p>';
+                    } else {
+                        result.innerHTML = `<p style="color: #f44336;">❌ خطأ في التسجيل: ${error.message}</p>`;
+                    }
+                });
+        }
+
+        function testFirestore() {
+            const result = document.getElementById('result');
+            
+            db.collection('test').add({
+                message: 'Hello from SDTORA!',
+                timestamp: firebase.firestore.FieldValue.serverTimestamp()
+            })
+            .then((docRef) => {
+                result.innerHTML = '<p style="color: #4CAF50;">✅ تم حفظ البيانات في Firestore!</p>';
+                result.innerHTML += `<p>Document ID: ${docRef.id}</p>`;
+            })
+            .catch((error) => {
+                result.innerHTML = `<p style="color: #f44336;">❌ خطأ في Firestore: ${error.message}</p>`;
+            });
+        }
+
+        // التحقق التلقائي عند تحميل الصفحة
+        setTimeout(testFirebase, 1000);
+    </script>
+</body>
+</html>

@@ -1,0 +1,478 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>محفظة SDTORA</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="style.css">
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+    <script src="firebase-config.js"></script>
+    <style>
+        .wallet-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 30px;
+        }
+
+        .wallet-header {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+
+        .balance-card {
+            background: var(--win-glass);
+            backdrop-filter: blur(20px);
+            border-radius: var(--win-radius-lg);
+            padding: 40px;
+            text-align: center;
+            margin-bottom: 30px;
+            border: 1px solid var(--win-glass-border);
+            box-shadow: var(--win-shadow);
+        }
+
+        .balance-amount {
+            font-size: 3rem;
+            font-weight: 800;
+            background: linear-gradient(135deg, var(--win-accent-light), #ffffff);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin: 20px 0;
+        }
+
+        .wallet-actions {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 40px;
+        }
+
+        .action-btn {
+            background: var(--win-glass);
+            border: 1px solid var(--win-glass-border);
+            padding: 25px;
+            border-radius: var(--win-radius);
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            color: var(--win-text);
+            display: block;
+        }
+
+        .action-btn:hover {
+            transform: translateY(-5px);
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        .action-icon {
+            font-size: 2rem;
+            margin-bottom: 15px;
+            color: var(--win-accent-light);
+        }
+
+        .transactions-list {
+            background: var(--win-glass);
+            border-radius: var(--win-radius-lg);
+            padding: 30px;
+            border: 1px solid var(--win-glass-border);
+        }
+
+        .transaction-item {
+            display: flex;
+            justify-content: between;
+            align-items: center;
+            padding: 15px;
+            border-bottom: 1px solid var(--win-border);
+        }
+
+        .transaction-item:last-child {
+            border-bottom: none;
+        }
+    </style>
+</head>
+<body>
+    <!-- قسم كودات الهدية -->
+<div class="gift-section" style="margin-bottom: 40px;">
+    <div class="card" style="text-align: center;">
+        <div class="card-icon">
+            <i class="fas fa-gift"></i>
+        </div>
+        <h3>كودات الهدية</h3>
+        <p>ادخل كود الهدية لتحصل على عملات SDTORA مجانية</p>
+        
+        <div style="display: flex; gap: 10px; margin: 20px 0;">
+            <input type="text" id="giftCode" placeholder="أدخل كود الهدية هنا" 
+                   style="flex: 1; padding: 12px; border-radius: 8px; border: 1px solid var(--win-border); background: rgba(255,255,255,0.1); color: var(--win-text);">
+            <button onclick="redeemGiftCode()" class="btn btn-primary">تفعيل الكود</button>
+        </div>
+        
+        <div id="giftMessage" style="margin-top: 15px;"></div>
+        
+        <!-- أكواد تجريبية -->
+        <div style="margin-top: 25px; padding: 15px; background: rgba(255,255,255,0.05); border-radius: 8px;">
+            <h4>🎁 أكواد تجريبية:</h4>
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px; margin-top: 10px;">
+                <div>
+                    <strong>WELCOME100</strong><br>
+                    <small>100 SDTORA</small>
+                    <button onclick="copyCode('WELCOME100')" class="btn-secondary" style="padding: 3px 8px; font-size: 12px; margin-top: 5px;">نسخ</button>
+                </div>
+                <div>
+                    <strong>NEWUSER50</strong><br>
+                    <small>50 SDTORA</small>
+                    <button onclick="copyCode('NEWUSER50')" class="btn-secondary" style="padding: 3px 8px; font-size: 12px; margin-top: 5px;">نسخ</button>
+                </div>
+                <div>
+                    <strong>BONUS200</strong><br>
+                    <small>200 SDTORA</small>
+                    <button onclick="copyCode('BONUS200')" class="btn-secondary" style="padding: 3px 8px; font-size: 12px; margin-top: 5px;">نسخ</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+    <!-- شريط المهام -->
+    <div class="taskbar">
+        <button class="start-button" onclick="window.location.href='index.html'">
+            <i class="fas fa-home"></i>
+            الرئيسية
+        </button>
+        <div class="taskbar-icons">
+            <div class="taskbar-icon" onclick="window.location.href='index.html'">
+                <i class="fas fa-home"></i>
+            </div>
+            <div class="taskbar-icon">
+                <i class="fas fa-wallet"></i>
+            </div>
+        </div>
+        <div class="system-tray">
+            <span id="current-time">١٠:٢٤</span>
+        </div>
+    </div>
+
+    <!-- محتوى المحفظة -->
+    <div class="container">
+        <div class="wallet-header">
+            <h1>محفظة SDTORA</h1>
+            <p>إدارة أصولك الرقمية بسهولة وأمان</p>
+        </div>
+
+        <div class="balance-card">
+            <h2>رصيدك الحالي</h2>
+            <div class="balance-amount" id="balance">0.00 SDTORA</div>
+            <p id="usdValue">≈ $0.00 USD</p>
+            <p style="margin-top: 10px; font-size: 14px; color: var(--win-text-secondary;">
+                عنوان محفظتك: <span id="walletAddress">-</span>
+            </p>
+        </div>
+
+        <div class="wallet-actions">
+            <a href="send.html" class="action-btn">
+                <div class="action-icon">
+                    <i class="fas fa-paper-plane"></i>
+                </div>
+                <h3>إرسال</h3>
+                <p>إرسال SDTORA إلى عنوان آخر</p>
+            </a>
+
+            <a href="receive.html" class="action-btn">
+                <div class="action-icon">
+                    <i class="fas fa-qrcode"></i>
+                </div>
+                <h3>استقبال</h3>
+                <p>استقبال SDTORA من الآخرين</p>
+            </a>
+
+            <a href="swap.html" class="action-btn">
+                <div class="action-icon">
+                    <i class="fas fa-exchange-alt"></i>
+                </div>
+                <h3>تبادل</h3>
+                <p>تبادل بين العملات المختلفة</p>
+            </a>
+
+            <a href="history.html" class="action-btn">
+                <div class="action-icon">
+                    <i class="fas fa-history"></i>
+                </div>
+                <h3>السجل</h3>
+                <p>عرض سجل المعاملات</p>
+            </a>
+        </div>
+
+        <div class="transactions-list">
+            <h3>آخر المعاملات</h3>
+            <div id="transactions-container">
+                <p>جاري تحميل المعاملات...</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // تفعيل كود الهدية
+async function redeemGiftCode() {
+    const giftCode = document.getElementById('giftCode').value.trim().toUpperCase();
+    const messageDiv = document.getElementById('giftMessage');
+    
+    if (!giftCode) {
+        messageDiv.innerHTML = '<p style="color: #f44336;">❌ الرجاء إدخال كود الهدية</p>';
+        return;
+    }
+    
+    const user = firebase.auth().currentUser;
+    if (!user) {
+        messageDiv.innerHTML = '<p style="color: #f44336;">❌ يجب تسجيل الدخول أولاً</p>';
+        return;
+    }
+    
+    messageDiv.innerHTML = '<p style="color: #FF9800;">⏳ جاري التحقق من الكود...</p>';
+    
+    try {
+        // التحقق من الكود في Firestore
+        const codeDoc = await db.collection('giftCodes').doc(giftCode).get();
+        
+        if (!codeDoc.exists) {
+            messageDiv.innerHTML = '<p style="color: #f44336;">❌ كود الهدية غير صحيح</p>';
+            return;
+        }
+        
+        const codeData = codeDoc.data();
+        
+        // التحقق إذا انتهت صلاحية الكود
+        if (codeData.expiresAt && codeData.expiresAt.toDate() < new Date()) {
+            messageDiv.innerHTML = '<p style="color: #f44336;">❌ كود الهدية منتهي الصلاحية</p>';
+            return;
+        }
+        
+        // التحقق إذا تم استخدام الكود من قبل
+        const usedCheck = await db.collection('usedGiftCodes')
+            .where('userId', '==', user.uid)
+            .where('code', '==', giftCode)
+            .get();
+            
+        if (!usedCheck.empty) {
+            messageDiv.innerHTML = '<p style="color: #f44336;">❌ لقد استخدمت هذا الكود مسبقاً</p>';
+            return;
+        }
+        
+        // التحقق إذا وصل الحد الأقصى للاستخدام
+        if (codeData.maxUses) {
+            const usageCount = await db.collection('usedGiftCodes')
+                .where('code', '==', giftCode)
+                .get();
+                
+            if (usageCount.size >= codeData.maxUses) {
+                messageDiv.innerHTML = '<p style="color: #f44336;">❌ تم استخدام هذا الكود بالكامل</p>';
+                return;
+            }
+        }
+        
+        // إضافة الرصيد للمستخدم
+        const userWallet = await db.collection('wallets').doc(user.uid).get();
+        const currentBalance = userWallet.exists ? userWallet.data().balance : 0;
+        const newBalance = currentBalance + codeData.amount;
+        
+        await db.collection('wallets').doc(user.uid).set({
+            balance: newBalance,
+            address: userWallet.exists ? userWallet.data().address : generateWalletAddress(),
+            updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+        }, { merge: true });
+        
+        // تسجيل استخدام الكود
+        await db.collection('usedGiftCodes').add({
+            userId: user.uid,
+            code: giftCode,
+            amount: codeData.amount,
+            usedAt: firebase.firestore.FieldValue.serverTimestamp()
+        });
+        
+        // تسجيل المعاملة
+        await db.collection('transactions').add({
+            userId: user.uid,
+            type: 'receive',
+            amount: codeData.amount,
+            from: 'نظام الهدايا',
+            description: `كود هدية: ${giftCode}`,
+            timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+            status: 'completed'
+        });
+        
+        // زيادة عدد مرات الاستخدام إذا كان محدوداً
+        if (codeData.maxUses) {
+            await db.collection('giftCodes').doc(giftCode).update({
+                usedCount: firebase.firestore.FieldValue.increment(1)
+            });
+        }
+        
+        messageDiv.innerHTML = `<p style="color: #4CAF50;">✅ تم تفعيل الكود! تم إضافة ${codeData.amount} SDTORA إلى رصيدك</p>`;
+        document.getElementById('giftCode').value = '';
+        
+        // تحديث الرصيد المعروض
+        loadWalletData(user.uid);
+        loadTransactions(user.uid);
+        
+    } catch (error) {
+        console.error('Error redeeming gift code:', error);
+        messageDiv.innerHTML = '<p style="color: #f44336;">❌ حدث خطأ أثناء تفعيل الكود</p>';
+    }
+}
+
+// نسخ الكود
+function copyCode(code) {
+    navigator.clipboard.writeText(code).then(() => {
+        const messageDiv = document.getElementById('giftMessage');
+        messageDiv.innerHTML = `<p style="color: #4CAF50;">✅ تم نسخ الكود: ${code}</p>`;
+    });
+}
+
+// إنشاء أكواد هدايا تلقائية (للمسؤول)
+async function createSampleGiftCodes() {
+    const sampleCodes = [
+        {
+            code: 'WELCOME100',
+            amount: 100,
+            maxUses: 100,
+            expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 يوم
+            createdAt: firebase.firestore.FieldValue.serverTimestamp()
+        },
+        {
+            code: 'NEWUSER50',
+            amount: 50,
+            maxUses: 200,
+            expiresAt: new Date(Date.now() + 60 * 24 * 60 * 60 * 1000), // 60 يوم
+            createdAt: firebase.firestore.FieldValue.serverTimestamp()
+        },
+        {
+            code: 'BONUS200',
+            amount: 200,
+            maxUses: 50,
+            expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 أيام
+            createdAt: firebase.firestore.FieldValue.serverTimestamp()
+        }
+    ];
+    
+    for (const codeData of sampleCodes) {
+        try {
+            await db.collection('giftCodes').doc(codeData.code).set(codeData);
+            console.log(`Created gift code: ${codeData.code}`);
+        } catch (error) {
+            console.error(`Error creating code ${codeData.code}:`, error);
+        }
+    }
+}
+
+// استدعاء إنشاء الأكواد تلقائياً عند تحميل المحفظة (للمرة الأولى فقط)
+firebase.auth().onAuthStateChanged((user) => {
+    if (user) {
+        // إنشاء الأكواد تلقائياً إذا لم تكن موجودة
+        createSampleGiftCodes();
+    }
+});
+        // التحقق من تسجيل الدخول
+        firebase.auth().onAuthStateChanged((user) => {
+            if (!user) {
+                // إذا لم يكن مسجل الدخول، إذهب لصفحة التسجيل
+                window.location.href = 'auth.html';
+            } else {
+                // جلب بيانات المحفظة
+                loadWalletData(user.uid);
+                loadTransactions(user.uid);
+            }
+        });
+
+        // جلب بيانات المحفظة
+        function loadWalletData(userId) {
+            db.collection('wallets').doc(userId).get()
+                .then((doc) => {
+                    if (doc.exists) {
+                        const walletData = doc.data();
+                        document.getElementById('balance').textContent = walletData.balance + ' SDTORA';
+                        document.getElementById('usdValue').textContent = '≈ $' + (walletData.balance * 1.24).toFixed(2) + ' USD';
+                        document.getElementById('walletAddress').textContent = walletData.address;
+                    } else {
+                        // إنشاء محفظة جديدة إذا لم توجد
+                        createNewWallet(userId);
+                    }
+                })
+                .catch((error) => {
+                    console.error('Error loading wallet:', error);
+                });
+        }
+
+        // إنشاء محفظة جديدة
+        function createNewWallet(userId) {
+            const walletData = {
+                balance: 1000, // رصيد ابتدائي
+                address: generateWalletAddress(),
+                createdAt: firebase.firestore.FieldValue.serverTimestamp()
+            };
+            
+            db.collection('wallets').doc(userId).set(walletData)
+                .then(() => {
+                    loadWalletData(userId);
+                })
+                .catch((error) => {
+                    console.error('Error creating wallet:', error);
+                });
+        }
+
+        // توليد عنوان محفظة
+        function generateWalletAddress() {
+            return 'SDT' + Math.random().toString(36).substr(2, 9).toUpperCase();
+        }
+
+        // جلب المعاملات
+        function loadTransactions(userId) {
+            db.collection('transactions')
+                .where('userId', '==', userId)
+                .orderBy('timestamp', 'desc')
+                .limit(5)
+                .get()
+                .then((querySnapshot) => {
+                    const container = document.getElementById('transactions-container');
+                    if (querySnapshot.empty) {
+                        container.innerHTML = '<p>لا توجد معاملات حتى الآن</p>';
+                        return;
+                    }
+
+                    let transactionsHTML = '';
+                    querySnapshot.forEach((doc) => {
+                        const transaction = doc.data();
+                        transactionsHTML += `
+                            <div class="transaction-item">
+                                <div>
+                                    <strong>${transaction.type === 'send' ? 'إرسال' : 'استقبال'}</strong>
+                                    <p style="color: var(--win-text-secondary); margin: 5px 0;">
+                                        ${transaction.amount} SDTORA
+                                    </p>
+                                </div>
+                                <div style="text-align: left;">
+                                    <small>${new Date(transaction.timestamp?.toDate()).toLocaleDateString('ar-EG')}</small>
+                                    <p style="color: ${transaction.status === 'completed' ? '#4CAF50' : '#FF9800'}; margin: 5px 0;">
+                                        ${transaction.status === 'completed' ? 'مكتمل' : 'قيد الانتظار'}
+                                    </p>
+                                </div>
+                            </div>
+                        `;
+                    });
+                    container.innerHTML = transactionsHTML;
+                })
+                .catch((error) => {
+                    console.error('Error loading transactions:', error);
+                });
+        }
+
+        // تحديث الوقت
+        function updateTime() {
+            const now = new Date();
+            const timeString = now.toLocaleTimeString('ar-EG');
+            document.getElementById('current-time').textContent = timeString;
+        }
+        setInterval(updateTime, 1000);
+        updateTime();
+    </script>
+</body>
+</html>

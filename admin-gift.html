@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>إدارة أكواد الهدايا - SDTORA</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+    <script src="firebase-config.js"></script>
+    <style>
+        .admin-container {
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 30px;
+        }
+        
+        .create-code-form {
+            background: var(--win-glass);
+            padding: 25px;
+            border-radius: var(--win-radius-lg);
+            margin-bottom: 30px;
+            border: 1px solid var(--win-glass-border);
+        }
+        
+        .form-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+        
+        .form-input {
+            padding: 12px;
+            border-radius: var(--win-radius);
+            border: 1px solid var(--win-border);
+            background: rgba(255,255,255,0.1);
+            color: var(--win-text);
+            width: 100%;
+            box-sizing: border-box;
+        }
+        
+        .codes-list {
+            background: var(--win-glass);
+            padding: 25px;
+            border-radius: var(--win-radius-lg);
+            border: 1px solid var(--win-glass-border);
+        }
+        
+        .code-item {
+            display: grid;
+            grid-template-columns: 1fr 2fr 1fr 1fr auto;
+            gap: 15px;
+            padding: 15px;
+            border-bottom: 1px solid var(--win-border);
+            align-items: center;
+        }
+        
+        .code-item:last-child {
+            border-bottom: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="taskbar">
+        <button class="start-button" onclick="window.location.href='index.html'">
+            <i class="fas fa-home"></i>
+            الرئيسية
+        </button>
+        <div class="system-tray">
+            <span id="current-time">١٠:٢٤</span>
+        </div>
+    </div>
+
+    <div class="admin-container">
+        <h1 style="text-align: center; margin-bottom: 30px;">🎁 إدارة أكواد الهدايا</h1>
+        
+        <!-- نموذج إنشاء كود جديد -->
+        <div class="create-code-form">
+            <h3>إنشاء كود هدية جديد</h3>
+            <form id="createCodeForm">
+                <div class="form-grid">
+                    <div>
+                        <label>كود الهدية</label>
+                        <input type="text" class="form-input" id="newCode" placeholder="مثال: SUMMER50" required>
+                    </div>
+                    <div>
+                        <label>المبلغ (SDTORA)</label>
+                        <input type="number" class="form-input" id="newAmount" placeholder="100" min="1" required>
+                    </div>
+                    <div>
+                        <label>الحد الأقصى للاستخدام</label>
+                        <input type="number" class="form-input" id="newMaxUses" placeholder="100 (0 = لا نهائي)" min="0">
+                    </div>
+                    <div>
+                        <label>تاريخ الانتهاء</label>
+                        <input type="date" class="form-input" id="newExpiresAt">
+                    </div>
+                </div>
+                <button type="submit" class="btn btn-primary">إنشاء الكود</button>
+                <button type="button" class="btn btn-secondary" onclick="createSampleCodes()">إنشاء أكواد تجريبية</button>
+            </form>
+            <div id="createMessage" style="margin-top: 15px;"></div>
+        </div>
+
+        <!-- قائمة الأكواد -->
+        <div class="codes-list">
+            <h3>الأكواد الحالية</h3>
+            <div id="codesContainer">
+                <p>جاري تحميل الأكواد...</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // إنشاء كود جديد
+        document.getElementById('createCodeForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const code = document.getElementById('newCode').value.trim().toUpperCase();
+            const amount = parseInt(document.getElementById('newAmount').value);
+            const maxUses = parseInt(document.getElementById('newMaxUses').value) || 0;
+            const expiresAt = document.getElementById('newExpiresAt').value;
+            const messageDiv = document.getElementById('createMessage');
+            
+            if (!code) {
+                messageDiv.innerHTML = '<p style="color: #f44336;">❌ الرجاء إدخال كود</p>';
+                return;
+            }
+            
+            const codeData = {
+                code: code,
+                amount: amount,
+                maxUses: maxUses || null,
+                createdAt: firebase.firestore.FieldValue.serverTimestamp()
+            };
+            
+            if (expiresAt) {
+                codeData.expiresAt = new Date(expiresAt);
+            }
+            
+            try {
+                await db.collection('giftCodes').doc(code).set(codeData);
+                messageDiv.innerHTML = `<p style="color: #4CAF50;">✅ تم إنشاء الكود: ${code}</p>`;
+                document.getElementById('createCodeForm').reset();
+                loadGiftCodes();
+            } catch (error) {
+                messageDiv.innerHTML = `<p style="color: #f44336;">❌ خطأ في إنشاء الكود: ${error.message}</p>`;
+            }
+        });
+
+        // تحميل الأكواد
+        async function loadGiftCodes() {
+            try {
+                const snapshot = await db.collection('giftCodes').orderBy('createdAt', 'desc').get();
+                const container = document.getElementById('codesContainer');
+                
+                if (snapshot.empty) {
+                    container.innerHTML = '<p>لا توجد أكواد حالياً</p>';
+                    return;
+                }
+                
+                let html = `
+                    <div class="code-item" style="font-weight: bold; background: rgba(255,255,255,0.05);">
+                        <div>الكود</div>
+                        <div>المعلومات</div>
+                        <div>المستخدم</div>
+                        <div>الحالة</div>
+                        <div>الإجراءات</div>
+                    </div>
+                `;
+                
+                for (const doc of snapshot.docs) {
+                    const codeData = doc.data();
+                    const isExpired = codeData.expiresAt && codeData.expiresAt.toDate() < new Date();
+                    const usageCount = await getCodeUsageCount(codeData.code);
+                    const isFullyUsed = codeData.maxUses && usageCount >= codeData.maxUses;
+                    
+                    html += `
+                        <div class="code-item">
+                            <div><strong>${codeData.code}</strong></div>
+                            <div>
+                                ${codeData.amount} SDTORA<br>
+                                <small>${codeData.maxUses ? `الحد: ${codeData.maxUses}` : 'لا نهائي'}</small>
+                            </div>
+                            <div>${usageCount} / ${codeData.maxUses || '∞'}</div>
+                            <div>
+                                <span style="color: ${isExpired || isFullyUsed ? '#f44336' : '#4CAF50'}">
+                                    ${isExpired ? 'منتهي' : isFullyUsed ? 'مكتمل' : 'نشط'}
+                                </span>
+                            </div>
+                            <div>
+                                <button onclick="deleteCode('${codeData.code}')" class="btn-secondary" style="padding: 5px 10px;">حذف</button>
+                            </div>
+                        </div>
+                    `;
+                }
+                
+                container.innerHTML = html;
+            } catch (error) {
+                console.error('Error loading codes:', error);
+            }
+        }
+
+        // الحصول على عدد مرات استخدام الكود
+        async function getCodeUsageCount(code) {
+            const snapshot = await db.collection('usedGiftCodes').where('code', '==', code).get();
+            return snapshot.size;
+        }
+
+        // حذف الكود
+        async function deleteCode(code) {
+            if (confirm(`هل أنت متأكد من حذف الكود ${code}؟`)) {
+                try {
+                    await db.collection('giftCodes').doc(code).delete();
+                    loadGiftCodes();
+                } catch (error) {
+                    alert('خطأ في حذف الكود: ' + error.message);
+                }
+            }
+        }
+
+        // إنشاء أكواد تجريبية
+        async function createSampleCodes() {
+            await createSampleGiftCodes();
+            loadGiftCodes();
+            document.getElementById('createMessage').innerHTML = '<p style="color: #4CAF50;">✅ تم إنشاء الأكواد التجريبية</p>';
+        }
+
+        // تحديث الوقت
+        function updateTime() {
+            document.getElementById('current-time').textContent = new Date().toLocaleTimeString('ar-EG');
+        }
+        setInterval(updateTime, 1000);
+        updateTime();
+
+        // تحميل الأكواد عند فتح الصفحة
+        loadGiftCodes();
+    </script>
+</body>
+</html>
