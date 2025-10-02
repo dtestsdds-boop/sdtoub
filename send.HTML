@@ -1,0 +1,583 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>إرسال عملات - SDTORA</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="style.css">
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+    <script src="firebase-config.js"></script>
+    <style>
+        .send-container {
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 30px;
+        }
+
+        .send-card {
+            background: var(--win-glass);
+            backdrop-filter: blur(20px);
+            border-radius: var(--win-radius-lg);
+            padding: 40px;
+            border: 1px solid var(--win-glass-border);
+            box-shadow: var(--win-shadow);
+        }
+
+        .balance-info {
+            background: rgba(255,255,255,0.05);
+            padding: 20px;
+            border-radius: var(--win-radius);
+            margin-bottom: 30px;
+            text-align: center;
+            border: 1px solid var(--win-glass-border);
+        }
+
+        .balance-amount {
+            font-size: 2.5rem;
+            font-weight: 800;
+            background: linear-gradient(135deg, var(--win-accent-light), #ffffff);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin: 10px 0;
+        }
+
+        .form-group {
+            margin-bottom: 25px;
+        }
+
+        .form-label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: var(--win-text);
+        }
+
+        .form-input {
+            width: 100%;
+            padding: 15px;
+            border-radius: var(--win-radius);
+            border: 1px solid var(--win-border);
+            background: rgba(255,255,255,0.1);
+            color: var(--win-text);
+            font-size: 16px;
+            transition: all 0.3s ease;
+        }
+
+        .form-input:focus {
+            outline: none;
+            border-color: var(--win-accent-light);
+            box-shadow: 0 0 0 3px rgba(41, 151, 255, 0.1);
+        }
+
+        .amount-input {
+            position: relative;
+        }
+
+        .currency-symbol {
+            position: absolute;
+            left: 15px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--win-text-secondary);
+            font-weight: bold;
+        }
+
+        .fee-info {
+            background: rgba(255,193,7,0.1);
+            padding: 15px;
+            border-radius: var(--win-radius);
+            margin: 15px 0;
+            border: 1px solid rgba(255,193,7,0.3);
+            font-size: 14px;
+        }
+
+        .summary-card {
+            background: rgba(255,255,255,0.05);
+            padding: 20px;
+            border-radius: var(--win-radius);
+            margin: 20px 0;
+            border: 1px solid var(--win-glass-border);
+        }
+
+        .summary-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 10px;
+            padding: 8px 0;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+        }
+
+        .summary-row:last-child {
+            border-bottom: none;
+            font-weight: bold;
+            font-size: 1.1rem;
+        }
+
+        .success-message {
+            background: rgba(76, 175, 80, 0.2);
+            padding: 20px;
+            border-radius: var(--win-radius);
+            margin: 20px 0;
+            border: 1px solid rgba(76, 175, 80, 0.5);
+            text-align: center;
+        }
+
+        .receiver-info {
+            background: rgba(41, 151, 255, 0.1);
+            padding: 15px;
+            border-radius: var(--win-radius);
+            margin: 10px 0;
+            border: 1px solid rgba(41, 151, 255, 0.3);
+        }
+    </style>
+</head>
+<body>
+    <!-- تأثيرات الخلفية -->
+    <div class="bg-effects">
+        <div class="smoke"></div>
+        <div class="smoke"></div>
+        <div class="smoke"></div>
+    </div>
+
+    <!-- شريط المهام -->
+    <div class="taskbar">
+        <button class="start-button" onclick="window.location.href='index.html'">
+            <i class="fas fa-home"></i>
+            الرئيسية
+        </button>
+        <div class="taskbar-icons">
+            <div class="taskbar-icon" onclick="window.location.href='index.html'">
+                <i class="fas fa-home"></i>
+            </div>
+            <div class="taskbar-icon" onclick="window.location.href='wallet.html'">
+                <i class="fas fa-wallet"></i>
+            </div>
+            <div class="taskbar-icon" onclick="window.location.href='send.html'">
+                <i class="fas fa-paper-plane"></i>
+            </div>
+        </div>
+        <div class="system-tray">
+            <span id="current-time">١٠:٢٤</span>
+        </div>
+    </div>
+
+    <!-- محتوى الإرسال -->
+    <div class="send-container">
+        <!-- الهيدر -->
+        <header class="header">
+            <div class="logo">
+                <div class="logo-icon">SD</div>
+                <div class="logo-text">
+                    <h1>إرسال عملات</h1>
+                    <p>أرسل SDTORA بسهولة وأمان</p>
+                </div>
+            </div>
+            <nav class="nav-menu">
+                <a href="wallet.html" class="nav-item">← العودة للمحفظة</a>
+            </nav>
+        </header>
+
+        <!-- معلومات الرصيد -->
+        <div class="balance-info">
+            <h3>رصيدك المتاح</h3>
+            <div class="balance-amount" id="currentBalance">0.00 SDTORA</div>
+            <p style="color: var(--win-text-secondary);" id="usdBalance">≈ $0.00 USD</p>
+        </div>
+
+        <!-- بطاقة الإرسال -->
+        <div class="send-card">
+            <form id="sendForm">
+                <!-- عنوان المحفظة المستقبلة -->
+                <div class="form-group">
+                    <label class="form-label">عنوان المحفظة المستقبلة</label>
+                    <input type="text" id="receiverAddress" class="form-input" placeholder="أدخل عنوان المحفظة (مثال: SDT1A2B3C4D5E)" required>
+                    <button type="button" onclick="checkReceiver()" class="btn btn-secondary" style="margin-top: 10px; width: 100%;">
+                        <i class="fas fa-search"></i> التحقق من المستقبل
+                    </button>
+                    <div id="receiverInfo"></div>
+                </div>
+
+                <!-- المبلغ -->
+                <div class="form-group">
+                    <label class="form-label">المبلغ المراد إرساله</label>
+                    <div class="amount-input">
+                        <span class="currency-symbol">SDTORA</span>
+                        <input type="number" id="amount" class="form-input" placeholder="0.00" step="0.01" min="0.01" required style="padding-left: 80px;">
+                    </div>
+                    <div style="display: flex; gap: 10px; margin-top: 10px;">
+                        <button type="button" class="btn-secondary" onclick="setAmount(10)" style="padding: 8px 15px;">10</button>
+                        <button type="button" class="btn-secondary" onclick="setAmount(50)" style="padding: 8px 15px;">50</button>
+                        <button type="button" class="btn-secondary" onclick="setAmount(100)" style="padding: 8px 15px;">100</button>
+                        <button type="button" class="btn-secondary" onclick="setMaxAmount()" style="padding: 8px 15px;">الكل</button>
+                    </div>
+                </div>
+
+                <!-- رسالة اختيارية -->
+                <div class="form-group">
+                    <label class="form-label">رسالة (اختياري)</label>
+                    <input type="text" id="message" class="form-input" placeholder="أضف رسالة للمستقبل...">
+                </div>
+
+                <!-- معلومات الرسوم -->
+                <div class="fee-info">
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <span>💰 رسوم الشبكة:</span>
+                        <span id="networkFee">0.10 SDTORA</span>
+                    </div>
+                    <small style="color: var(--win-text-secondary); display: block; margin-top: 5px;">
+                        هذه الرسوم تذهب للشبكة لتأمين المعاملة
+                    </small>
+                </div>
+
+                <!-- ملخص المعاملة -->
+                <div class="summary-card" id="transactionSummary" style="display: none;">
+                    <h4 style="margin-bottom: 15px; text-align: center;">ملخص المعاملة</h4>
+                    <div class="summary-row">
+                        <span>المبلغ المرسل:</span>
+                        <span id="summaryAmount">0.00 SDTORA</span>
+                    </div>
+                    <div class="summary-row">
+                        <span>رسوم الشبكة:</span>
+                        <span id="summaryFee">0.10 SDTORA</span>
+                    </div>
+                    <div class="summary-row">
+                        <span>الإجمالي المخصوم:</span>
+                        <span id="summaryTotal">0.00 SDTORA</span>
+                    </div>
+                </div>
+
+                <!-- زر الإرسال -->
+                <button type="submit" class="btn btn-primary" style="width: 100%; margin-top: 20px;">
+                    <i class="fas fa-paper-plane" style="margin-left: 8px;"></i>
+                    تأكيد وإرسال
+                </button>
+            </form>
+
+            <!-- رسالة النجاح -->
+            <div id="successMessage" class="success-message" style="display: none;">
+                <i class="fas fa-check-circle" style="font-size: 3rem; color: #4CAF50; margin-bottom: 15px;"></i>
+                <h3>تم الإرسال بنجاح! ✅</h3>
+                <p id="successDetails"></p>
+                <div class="action-buttons" style="margin-top: 20px;">
+                    <button onclick="window.location.href='wallet.html'" class="btn btn-primary">العودة للمحفظة</button>
+                    <button onclick="resetForm()" class="btn btn-secondary">إرسال تحويل آخر</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentUserBalance = 0;
+        let currentUserAddress = '';
+        const NETWORK_FEE = 0.10;
+        let receiverExists = false;
+
+        // تحميل بيانات المستخدم
+        async function loadUserData() {
+            try {
+                const firestore = firebase.firestore();
+                const user = firebase.auth().currentUser;
+                
+                if (!user) {
+                    window.location.href = 'auth.html';
+                    return;
+                }
+
+                // جلب بيانات المحفظة
+                const walletDoc = await firestore.collection('wallets').doc(user.uid).get();
+                
+                if (walletDoc.exists) {
+                    const walletData = walletDoc.data();
+                    currentUserBalance = walletData.balance || 0;
+                    currentUserAddress = walletData.address || 'غير معروف';
+                    
+                    document.getElementById('currentBalance').textContent = currentUserBalance.toFixed(2) + ' SDTORA';
+                    document.getElementById('usdBalance').textContent = '≈ $' + (currentUserBalance * 1.24).toFixed(2) + ' USD';
+                }
+
+            } catch (error) {
+                console.error('Error loading user data:', error);
+                alert('❌ خطأ في تحميل البيانات: ' + error.message);
+            }
+        }
+
+        // التحقق من المستقبل
+        async function checkReceiver() {
+            const receiverAddress = document.getElementById('receiverAddress').value.trim();
+            const receiverInfo = document.getElementById('receiverInfo');
+            
+            if (!receiverAddress) {
+                alert('❌ الرجاء إدخال عنوان المحفظة المستقبلة');
+                return;
+            }
+
+            if (receiverAddress === currentUserAddress) {
+                receiverInfo.innerHTML = '<div style="color: #f44336; margin-top: 10px;">❌ لا يمكنك إرسال الأموال لنفسك</div>';
+                receiverExists = false;
+                return;
+            }
+
+            receiverInfo.innerHTML = '<div style="color: #FF9800; margin-top: 10px;"><i class="fas fa-spinner fa-spin"></i> جاري البحث عن المستقبل...</div>';
+
+            try {
+                const firestore = firebase.firestore();
+                
+                // البحث عن المستقبل في قاعدة البيانات
+                const walletsSnapshot = await firestore.collection('wallets')
+                    .where('address', '==', receiverAddress)
+                    .get();
+
+                if (!walletsSnapshot.empty) {
+                    const receiverWallet = walletsSnapshot.docs[0];
+                    const receiverData = receiverWallet.data();
+                    
+                    receiverInfo.innerHTML = `
+                        <div class="receiver-info">
+                            <div style="color: #4CAF50; margin-bottom: 5px;">
+                                <i class="fas fa-check-circle"></i> تم العثور على المستقبل
+                            </div>
+                            <div style="font-size: 14px;">
+                                <strong>المستقبل:</strong> ${receiverData.fullName || 'مستخدم SDTORA'}
+                            </div>
+                            <div style="font-size: 12px; color: var(--win-text-secondary);">
+                                العنوان: ${receiverAddress}
+                            </div>
+                        </div>
+                    `;
+                    receiverExists = true;
+                } else {
+                    receiverInfo.innerHTML = `
+                        <div style="background: rgba(255,193,7,0.1); padding: 15px; border-radius: var(--win-radius); margin-top: 10px; border: 1px solid rgba(255,193,7,0.3);">
+                            <div style="color: #FF9800; margin-bottom: 5px;">
+                                <i class="fas fa-exclamation-triangle"></i> لم يتم العثور على المستقبل
+                            </div>
+                            <div style="font-size: 14px;">
+                                سيتم إنشاء محفظة جديدة لهذا العنوان عند الإرسال
+                            </div>
+                        </div>
+                    `;
+                    receiverExists = false;
+                }
+                
+            } catch (error) {
+                console.error('Error checking receiver:', error);
+                receiverInfo.innerHTML = '<div style="color: #f44336; margin-top: 10px;">❌ خطأ في البحث عن المستقبل</div>';
+                receiverExists = false;
+            }
+        }
+
+        // تعيين المبلغ
+        function setAmount(amount) {
+            document.getElementById('amount').value = amount;
+            calculateSummary();
+        }
+
+        // تعيين الحد الأقصى
+        function setMaxAmount() {
+            const maxAmount = Math.max(0, currentUserBalance - NETWORK_FEE);
+            document.getElementById('amount').value = maxAmount.toFixed(2);
+            calculateSummary();
+        }
+
+        // حساب الملخص
+        function calculateSummary() {
+            const amount = parseFloat(document.getElementById('amount').value) || 0;
+            const summaryDiv = document.getElementById('transactionSummary');
+            
+            if (amount > 0) {
+                const total = amount + NETWORK_FEE;
+                
+                document.getElementById('summaryAmount').textContent = amount.toFixed(2) + ' SDTORA';
+                document.getElementById('summaryFee').textContent = NETWORK_FEE.toFixed(2) + ' SDTORA';
+                document.getElementById('summaryTotal').textContent = total.toFixed(2) + ' SDTORA';
+                
+                summaryDiv.style.display = 'block';
+                
+                // التحقق إذا كان الرصيد كافي
+                if (total > currentUserBalance) {
+                    document.querySelector('button[type="submit"]').disabled = true;
+                    document.querySelector('button[type="submit"]').innerHTML = '<i class="fas fa-exclamation-triangle"></i> الرصيد غير كافي';
+                } else {
+                    document.querySelector('button[type="submit"]').disabled = false;
+                    document.querySelector('button[type="submit"]').innerHTML = '<i class="fas fa-paper-plane" style="margin-left: 8px;"></i> تأكيد وإرسال';
+                }
+            } else {
+                summaryDiv.style.display = 'none';
+            }
+        }
+
+        // إرسال المعاملة
+        document.getElementById('sendForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const submitBtn = this.querySelector('button[type="submit"]');
+            const originalText = submitBtn.innerHTML;
+            
+            const receiverAddress = document.getElementById('receiverAddress').value.trim();
+            const amount = parseFloat(document.getElementById('amount').value);
+            const message = document.getElementById('message').value.trim();
+            
+            // التحقق من البيانات
+            if (!receiverAddress) {
+                alert('❌ الرجاء إدخال عنوان المحفظة المستقبلة');
+                return;
+            }
+            
+            if (!amount || amount <= 0) {
+                alert('❌ الرجاء إدخال مبلغ صحيح');
+                return;
+            }
+            
+            if (receiverAddress === currentUserAddress) {
+                alert('❌ لا يمكنك إرسال الأموال لنفسك');
+                return;
+            }
+            
+            const totalAmount = amount + NETWORK_FEE;
+            
+            if (totalAmount > currentUserBalance) {
+                alert('❌ رصيدك غير كافي لإكمال هذه المعاملة');
+                return;
+            }
+            
+            if (!confirm(`هل أنت متأكد من إرسال ${amount} SDTORA إلى العنوان:\n${receiverAddress}؟`)) {
+                return;
+            }
+            
+            submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> جاري المعالجة...';
+            submitBtn.disabled = true;
+            
+            try {
+                const firestore = firebase.firestore();
+                const user = firebase.auth().currentUser;
+                
+                // إنشاء معاملة فريدة
+                const transactionId = 'TX' + Date.now() + Math.random().toString(36).substr(2, 5).toUpperCase();
+                
+                // 1. حفظ المعاملة في قاعدة البيانات
+                await firestore.collection('transactions').add({
+                    transactionId: transactionId,
+                    userId: user.uid,
+                    type: 'send',
+                    amount: amount,
+                    fee: NETWORK_FEE,
+                    total: totalAmount,
+                    toAddress: receiverAddress,
+                    fromAddress: currentUserAddress,
+                    message: message,
+                    status: 'completed',
+                    timestamp: firebase.firestore.FieldValue.serverTimestamp()
+                });
+                
+                // 2. تحديث رصيد المرسل (الخصم)
+                const newBalance = currentUserBalance - totalAmount;
+                await firestore.collection('wallets').doc(user.uid).update({
+                    balance: newBalance,
+                    lastUpdated: firebase.firestore.FieldValue.serverTimestamp()
+                });
+                
+                // 3. البحث عن المستقبل وتحديث رصيده
+                const walletsSnapshot = await firestore.collection('wallets')
+                    .where('address', '==', receiverAddress)
+                    .get();
+
+                let receiverUserId = null;
+                
+                if (!walletsSnapshot.empty) {
+                    // المستقبل موجود - تحديث رصيده
+                    const receiverWallet = walletsSnapshot.docs[0];
+                    receiverUserId = receiverWallet.id;
+                    const receiverData = receiverWallet.data();
+                    const newReceiverBalance = (receiverData.balance || 0) + amount;
+                    
+                    await firestore.collection('wallets').doc(receiverUserId).update({
+                        balance: newReceiverBalance,
+                        lastUpdated: firebase.firestore.FieldValue.serverTimestamp()
+                    });
+                    
+                    console.log(`✅ تم تحديث رصيد المستقبل: ${newReceiverBalance} SDTORA`);
+                } else {
+                    // المستقبل غير موجود - إنشاء محفظة جديدة
+                    receiverUserId = 'user_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5);
+                    
+                    await firestore.collection('wallets').doc(receiverUserId).set({
+                        address: receiverAddress,
+                        balance: amount,
+                        createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+                        lastUpdated: firebase.firestore.FieldValue.serverTimestamp(),
+                        isTemporary: true,
+                        fullName: 'مستخدم SDTORA'
+                    });
+                    
+                    console.log(`✅ تم إنشاء محفظة جديدة للمستقبل`);
+                }
+                
+                // 4. تسجيل المعاملة لدى المستقبل
+                await firestore.collection('transactions').add({
+                    transactionId: 'RX' + Date.now() + Math.random().toString(36).substr(2, 5).toUpperCase(),
+                    userId: receiverUserId,
+                    type: 'receive',
+                    amount: amount,
+                    fromAddress: currentUserAddress,
+                    toAddress: receiverAddress,
+                    message: message,
+                    status: 'completed',
+                    timestamp: firebase.firestore.FieldValue.serverTimestamp()
+                });
+                
+                // عرض رسالة النجاح
+                document.getElementById('sendForm').style.display = 'none';
+                document.getElementById('successMessage').style.display = 'block';
+                document.getElementById('successDetails').innerHTML = `
+                    تم إرسال <strong>${amount.toFixed(2)} SDTORA</strong> بنجاح
+                    <br>
+                    <small>رقم المعاملة: ${transactionId}</small>
+                    <br>
+                    <small>إلى: ${receiverAddress}</small>
+                    <br>
+                    <small style="color: #4CAF50;">✅ تم إضافة المبلغ للمستقبل بنجاح</small>
+                `;
+                
+                // تحديث الرصيد الحالي
+                currentUserBalance = newBalance;
+                document.getElementById('currentBalance').textContent = newBalance.toFixed(2) + ' SDTORA';
+                
+            } catch (error) {
+                console.error('Error sending transaction:', error);
+                alert('❌ خطأ في إرسال المعاملة: ' + error.message);
+                submitBtn.innerHTML = originalText;
+                submitBtn.disabled = false;
+            }
+        });
+
+        // إعادة تعيين النموذج
+        function resetForm() {
+            document.getElementById('sendForm').reset();
+            document.getElementById('sendForm').style.display = 'block';
+            document.getElementById('successMessage').style.display = 'none';
+            document.getElementById('transactionSummary').style.display = 'none';
+            document.getElementById('receiverInfo').innerHTML = '';
+            loadUserData();
+        }
+
+        // استماع لتغيير المبلغ
+        document.getElementById('amount').addEventListener('input', calculateSummary);
+
+        // تحديث الوقت
+        function updateTime() {
+            document.getElementById('current-time').textContent = new Date().toLocaleTimeString('ar-EG');
+        }
+
+        // تحميل البيانات عند فتح الصفحة
+        setTimeout(() => {
+            loadUserData();
+        }, 1000);
+
+        setInterval(updateTime, 1000);
+        updateTime();
+    </script>
+</body>
+</html>

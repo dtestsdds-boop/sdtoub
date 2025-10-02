@@ -60,6 +60,41 @@
         .code-item:last-child {
             border-bottom: none;
         }
+
+        /* الإضافات الجديدة */
+        .login-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+
+        .login-form {
+            background: var(--win-glass);
+            padding: 30px;
+            border-radius: var(--win-radius-lg);
+            border: 1px solid var(--win-glass-border);
+            width: 90%;
+            max-width: 400px;
+            text-align: center;
+        }
+
+        .access-denied {
+            text-align: center;
+            padding: 50px 20px;
+            color: #f44336;
+        }
+
+        .user-info {
+            margin-left: 15px;
+            direction: ltr;
+        }
     </style>
 </head>
 <body>
@@ -69,174 +104,203 @@
             الرئيسية
         </button>
         <div class="system-tray">
+            <span id="user-info" class="user-info"></span>
             <span id="current-time">١٠:٢٤</span>
         </div>
     </div>
 
-    <div class="admin-container">
-        <h1 style="text-align: center; margin-bottom: 30px;">🎁 إدارة أكواد الهدايا</h1>
-        
-        <!-- نموذج إنشاء كود جديد -->
-        <div class="create-code-form">
-            <h3>إنشاء كود هدية جديد</h3>
-            <form id="createCodeForm">
-                <div class="form-grid">
-                    <div>
-                        <label>كود الهدية</label>
-                        <input type="text" class="form-input" id="newCode" placeholder="مثال: SUMMER50" required>
-                    </div>
-                    <div>
-                        <label>المبلغ (SDTORA)</label>
-                        <input type="number" class="form-input" id="newAmount" placeholder="100" min="1" required>
-                    </div>
-                    <div>
-                        <label>الحد الأقصى للاستخدام</label>
-                        <input type="number" class="form-input" id="newMaxUses" placeholder="100 (0 = لا نهائي)" min="0">
-                    </div>
-                    <div>
-                        <label>تاريخ الانتهاء</label>
-                        <input type="date" class="form-input" id="newExpiresAt">
-                    </div>
-                </div>
-                <button type="submit" class="btn btn-primary">إنشاء الكود</button>
-                <button type="button" class="btn btn-secondary" onclick="createSampleCodes()">إنشاء أكواد تجريبية</button>
+    <!-- شاشة تسجيل الدخول -->
+    <div id="loginOverlay" class="login-overlay">
+        <div class="login-form">
+            <h3>🔐 تسجيل الدخول للإدارة</h3>
+            <form id="adminLoginForm">
+                <input type="email" class="form-input" id="adminEmail" placeholder="البريد الإلكتروني" required>
+                <input type="password" class="form-input" id="adminPassword" placeholder="كلمة المرور" required style="margin-top: 10px;">
+                <button type="submit" class="btn btn-primary" style="margin-top: 15px; width: 100%;">تسجيل الدخول</button>
             </form>
-            <div id="createMessage" style="margin-top: 15px;"></div>
+            <div id="loginMessage" style="margin-top: 15px;"></div>
         </div>
+    </div>
 
-        <!-- قائمة الأكواد -->
-        <div class="codes-list">
-            <h3>الأكواد الحالية</h3>
-            <div id="codesContainer">
-                <p>جاري تحميل الأكواد...</p>
+    <!-- محتوى الإدارة (سيتم إظهاره فقط للمسؤولين) -->
+    <div id="adminContent" style="display: none;">
+        <div class="admin-container">
+            <h1 style="text-align: center; margin-bottom: 30px;">🎁 إدارة أكواد الهدايا</h1>
+            
+            <!-- نموذج إنشاء كود جديد -->
+            <div class="create-code-form">
+                <h3>إنشاء كود هدية جديد</h3>
+                <form id="createCodeForm">
+                    <div class="form-grid">
+                        <div>
+                            <label>كود الهدية</label>
+                            <input type="text" class="form-input" id="newCode" placeholder="مثال: SUMMER50" required>
+                        </div>
+                        <div>
+                            <label>المبلغ (SDTORA)</label>
+                            <input type="number" class="form-input" id="newAmount" placeholder="100" min="1" required>
+                        </div>
+                        <div>
+                            <label>الحد الأقصى للاستخدام</label>
+                            <input type="number" class="form-input" id="newMaxUses" placeholder="100 (0 = لا نهائي)" min="0">
+                        </div>
+                        <div>
+                            <label>تاريخ الانتهاء</label>
+                            <input type="date" class="form-input" id="newExpiresAt">
+                        </div>
+                    </div>
+                    <button type="submit" class="btn btn-primary">إنشاء الكود</button>
+                    <button type="button" class="btn btn-secondary" onclick="createSampleCodes()">إنشاء أكواد تجريبية</button>
+                </form>
+                <div id="createMessage" style="margin-top: 15px;"></div>
+            </div>
+
+            <!-- قائمة الأكواد -->
+            <div class="codes-list">
+                <h3>الأكواد الحالية</h3>
+                <div id="codesContainer">
+                    <p>جاري تحميل الأكواد...</p>
+                </div>
             </div>
         </div>
     </div>
 
+    <!-- رسالة رفض الوصول -->
+    <div id="accessDenied" class="access-denied" style="display: none;">
+        <h2>⛔ الوصول مرفوض</h2>
+        <p>ليست لديك صلاحية للوصول إلى هذه الصفحة.</p>
+        <p>يجب أن تكون مسؤولاً للنظام للوصول إلى هذه الصفحة.</p>
+        <button onclick="window.location.href='index.html'" class="btn btn-primary" style="margin-top: 20px;">العودة للرئيسية</button>
+    </div>
+
     <script>
-        // إنشاء كود جديد
-        document.getElementById('createCodeForm').addEventListener('submit', async function(e) {
-            e.preventDefault();
-            
-            const code = document.getElementById('newCode').value.trim().toUpperCase();
-            const amount = parseInt(document.getElementById('newAmount').value);
-            const maxUses = parseInt(document.getElementById('newMaxUses').value) || 0;
-            const expiresAt = document.getElementById('newExpiresAt').value;
-            const messageDiv = document.getElementById('createMessage');
-            
-            if (!code) {
-                messageDiv.innerHTML = '<p style="color: #f44336;">❌ الرجاء إدخال كود</p>';
-                return;
-            }
-            
-            const codeData = {
-                code: code,
-                amount: amount,
-                maxUses: maxUses || null,
-                createdAt: firebase.firestore.FieldValue.serverTimestamp()
-            };
-            
-            if (expiresAt) {
-                codeData.expiresAt = new Date(expiresAt);
-            }
+    // حالة المصادقة
+    let currentUser = null;
+    let isAdmin = false;
+
+    // تهيئة المصادقة
+    firebase.auth().onAuthStateChanged(async (user) => {
+        console.log('Auth state changed:', user);
+        
+        if (user) {
+            currentUser = user;
             
             try {
-                await db.collection('giftCodes').doc(code).set(codeData);
-                messageDiv.innerHTML = `<p style="color: #4CAF50;">✅ تم إنشاء الكود: ${code}</p>`;
-                document.getElementById('createCodeForm').reset();
-                loadGiftCodes();
-            } catch (error) {
-                messageDiv.innerHTML = `<p style="color: #f44336;">❌ خطأ في إنشاء الكود: ${error.message}</p>`;
-            }
-        });
-
-        // تحميل الأكواد
-        async function loadGiftCodes() {
-            try {
-                const snapshot = await db.collection('giftCodes').orderBy('createdAt', 'desc').get();
-                const container = document.getElementById('codesContainer');
+                // إظهار رسالة التحقق
+                document.getElementById('loginMessage').innerHTML = '<p style="color: #4CAF50;">✅ جاري التحقق من الصلاحيات...</p>';
                 
-                if (snapshot.empty) {
-                    container.innerHTML = '<p>لا توجد أكواد حالياً</p>';
-                    return;
-                }
+                // التحقق من الصلاحيات باستخدام الدالة المباشرة
+                const userIsAdmin = await checkAdminAccess(user.uid);
+                isAdmin = userIsAdmin;
                 
-                let html = `
-                    <div class="code-item" style="font-weight: bold; background: rgba(255,255,255,0.05);">
-                        <div>الكود</div>
-                        <div>المعلومات</div>
-                        <div>المستخدم</div>
-                        <div>الحالة</div>
-                        <div>الإجراءات</div>
-                    </div>
-                `;
+                console.log('Admin check result:', userIsAdmin);
                 
-                for (const doc of snapshot.docs) {
-                    const codeData = doc.data();
-                    const isExpired = codeData.expiresAt && codeData.expiresAt.toDate() < new Date();
-                    const usageCount = await getCodeUsageCount(codeData.code);
-                    const isFullyUsed = codeData.maxUses && usageCount >= codeData.maxUses;
-                    
-                    html += `
-                        <div class="code-item">
-                            <div><strong>${codeData.code}</strong></div>
-                            <div>
-                                ${codeData.amount} SDTORA<br>
-                                <small>${codeData.maxUses ? `الحد: ${codeData.maxUses}` : 'لا نهائي'}</small>
-                            </div>
-                            <div>${usageCount} / ${codeData.maxUses || '∞'}</div>
-                            <div>
-                                <span style="color: ${isExpired || isFullyUsed ? '#f44336' : '#4CAF50'}">
-                                    ${isExpired ? 'منتهي' : isFullyUsed ? 'مكتمل' : 'نشط'}
-                                </span>
-                            </div>
-                            <div>
-                                <button onclick="deleteCode('${codeData.code}')" class="btn-secondary" style="padding: 5px 10px;">حذف</button>
-                            </div>
-                        </div>
-                    `;
-                }
+                // تحديث معلومات المستخدم
+                updateUserInfo();
                 
-                container.innerHTML = html;
-            } catch (error) {
-                console.error('Error loading codes:', error);
-            }
-        }
-
-        // الحصول على عدد مرات استخدام الكود
-        async function getCodeUsageCount(code) {
-            const snapshot = await db.collection('usedGiftCodes').where('code', '==', code).get();
-            return snapshot.size;
-        }
-
-        // حذف الكود
-        async function deleteCode(code) {
-            if (confirm(`هل أنت متأكد من حذف الكود ${code}؟`)) {
-                try {
-                    await db.collection('giftCodes').doc(code).delete();
+                if (userIsAdmin) {
+                    // إذا كان مسؤولاً، إظهار محتوى الإدارة
+                    document.getElementById('loginOverlay').style.display = 'none';
+                    document.getElementById('adminContent').style.display = 'block';
+                    document.getElementById('accessDenied').style.display = 'none';
                     loadGiftCodes();
-                } catch (error) {
-                    alert('خطأ في حذف الكود: ' + error.message);
+                } else {
+                    // إذا لم يكن مسؤولاً، إظهار رسالة رفض الوصول
+                    document.getElementById('loginOverlay').style.display = 'none';
+                    document.getElementById('adminContent').style.display = 'none';
+                    document.getElementById('accessDenied').style.display = 'block';
                 }
+            } catch (error) {
+                console.error('Error in auth state change:', error);
+                document.getElementById('loginMessage').innerHTML = '<p style="color: #f44336;">❌ خطأ في التحقق من الصلاحيات</p>';
             }
+        } else {
+            // إذا لم يكن مسجلاً الدخول، إظهار نموذج تسجيل الدخول
+            document.getElementById('loginOverlay').style.display = 'flex';
+            document.getElementById('adminContent').style.display = 'none';
+            document.getElementById('accessDenied').style.display = 'none';
+            document.getElementById('loginMessage').innerHTML = '';
         }
+    });
 
-        // إنشاء أكواد تجريبية
-        async function createSampleCodes() {
-            await createSampleGiftCodes();
-            loadGiftCodes();
-            document.getElementById('createMessage').innerHTML = '<p style="color: #4CAF50;">✅ تم إنشاء الأكواد التجريبية</p>';
+    // دالة بديلة للتحقق من الصلاحيات
+    async function checkAdminAccess(userId) {
+        try {
+            console.log('Checking admin access for:', userId);
+            const userDoc = await db.collection('users').doc(userId).get();
+            
+            if (userDoc.exists) {
+                const userData = userDoc.data();
+                console.log('Found user data:', userData);
+                
+                // التحقق بطرق متعددة
+                const isAdminUser = 
+                    userData.role === 'admin' || 
+                    userData.isAdmin === true ||
+                    userData.admin === true ||
+                    userData.userType === 'admin';
+                
+                console.log('Admin access result:', isAdminUser);
+                return isAdminUser;
+            } else {
+                console.log('No user document found for:', userId);
+                // إنشاء مستند للمستخدم إذا لم يكن موجوداً (اختياري)
+                // await db.collection('users').doc(userId).set({
+                //     email: currentUser.email,
+                //     role: 'user',
+                //     createdAt: firebase.firestore.FieldValue.serverTimestamp()
+                // });
+                return false;
+            }
+        } catch (error) {
+            console.error('Error in checkAdminAccess:', error);
+            return false;
         }
+    }
 
-        // تحديث الوقت
-        function updateTime() {
-            document.getElementById('current-time').textContent = new Date().toLocaleTimeString('ar-EG');
+    // تحديث معلومات المستخدم في الـ taskbar
+    function updateUserInfo() {
+        const userInfoElement = document.getElementById('user-info');
+        if (currentUser) {
+            userInfoElement.innerHTML = `
+                ${currentUser.email} 
+                <button onclick="logout()" class="btn-secondary" style="margin-right: 10px; padding: 2px 8px; font-size: 12px;">تسجيل الخروج</button>
+            `;
+        } else {
+            userInfoElement.innerHTML = '';
         }
-        setInterval(updateTime, 1000);
-        updateTime();
+    }
 
-        // تحميل الأكواد عند فتح الصفحة
-        loadGiftCodes();
-    </script>
+    // تسجيل الدخول
+    document.getElementById('adminLoginForm').addEventListener('submit', async function(e) {
+        e.preventDefault();
+        
+        const email = document.getElementById('adminEmail').value;
+        const password = document.getElementById('adminPassword').value;
+        const messageDiv = document.getElementById('loginMessage');
+        
+        try {
+            messageDiv.innerHTML = '<p style="color: #4CAF50;">⏳ جاري تسجيل الدخول...</p>';
+            await firebase.auth().signInWithEmailAndPassword(email, password);
+            // لا حاجة لرسالة هنا لأن onAuthStateChanged سيتعامل معها
+        } catch (error) {
+            messageDiv.innerHTML = `<p style="color: #f44336;">❌ خطأ في تسجيل الدخول: ${error.message}</p>`;
+        }
+    });
+
+    // تسجيل الخروج
+    async function logout() {
+        try {
+            await firebase.auth().signOut();
+            // إعادة تحميل الصفحة بعد تسجيل الخروج
+            window.location.reload();
+        } catch (error) {
+            console.error('Error signing out:', error);
+        }
+    }
+
+    // باقي الدوال تبقى كما هي...
+    // [أدخل هنا باقي الدوال: createCodeForm, loadGiftCodes, getCodeUsageCount, deleteCode, createSampleCodes, updateTime]
+</script>
 </body>
 </html>

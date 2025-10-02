@@ -31,3 +31,59 @@ try {
 } catch (error) {
     console.error("❌ Firebase initialization error:", error);
 }
+// دالة للتحقق إذا كان المستخدم مسؤولاً
+async function isUserAdmin() {
+    const user = firebase.auth().currentUser;
+    if (!user) {
+        console.log('No user found');
+        return false;
+    }
+
+    try {
+        console.log('Checking admin status for user:', user.uid);
+        const userDoc = await db.collection('users').doc(user.uid).get();
+        
+        if (userDoc.exists) {
+            const userData = userDoc.data();
+            console.log('User data:', userData);
+            const isAdmin = userData.role === 'admin' || userData.isAdmin === true;
+            console.log('Is admin:', isAdmin);
+            return isAdmin;
+        } else {
+            console.log('User document does not exist');
+            return false;
+        }
+    } catch (error) {
+        console.error('Error checking admin status:', error);
+        return false;
+    }
+}
+
+// دالة بديلة إذا كانت هناك مشكلة
+async function checkAdminAccess(userId) {
+    try {
+        const userDoc = await db.collection('users').doc(userId).get();
+        if (userDoc.exists) {
+            const userData = userDoc.data();
+            return userData.role === 'admin' || userData.isAdmin === true;
+        }
+        return false;
+    } catch (error) {
+        console.error('Error in checkAdminAccess:', error);
+        return false;
+    }
+}
+
+// دالة للحصول على معلومات المستخدم
+async function getUserRole() {
+    const user = firebase.auth().currentUser;
+    if (!user) return null;
+
+    try {
+        const userDoc = await db.collection('users').doc(user.uid).get();
+        return userDoc.exists ? userDoc.data().role : null;
+    } catch (error) {
+        console.error('Error getting user role:', error);
+        return null;
+    }
+}

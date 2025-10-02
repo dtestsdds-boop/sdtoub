@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>إضافة منتج - SDTORA</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+    <script src="firebase-config.js"></script>
+    <style>
+        .product-form-container {
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 30px;
+            background: var(--win-glass);
+            border-radius: var(--win-radius-lg);
+            border: 1px solid var(--win-glass-border);
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 500;
+            color: var(--win-text);
+        }
+
+        .form-input, .form-textarea, .form-select {
+            width: 100%;
+            padding: 12px;
+            border-radius: var(--win-radius);
+            border: 1px solid var(--win-border);
+            background: rgba(255,255,255,0.1);
+            color: var(--win-text);
+            font-family: 'Tajawal', sans-serif;
+        }
+
+        .form-textarea {
+            height: 120px;
+            resize: vertical;
+        }
+
+        .image-preview {
+            max-width: 200px;
+            max-height: 200px;
+            margin-top: 10px;
+            border-radius: var(--win-radius);
+            display: none;
+        }
+
+        .form-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+        }
+
+        @media (max-width: 768px) {
+            .form-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- تأثيرات الخلفية -->
+    <div class="bg-effects">
+        <div class="smoke"></div>
+        <div class="smoke"></div>
+        <div class="smoke"></div>
+    </div>
+
+    <!-- شريط المهام -->
+    <div class="taskbar">
+        <button class="start-button" onclick="window.location.href='index.html'">
+            <i class="fas fa-home"></i>
+        </button>
+        <div class="system-tray">
+            <div id="user-info" style="display: none;">
+                <span id="user-email"></span>
+                <button onclick="logout()" class="btn-secondary" style="padding: 5px 10px; margin-right: 10px;">تسجيل خروج</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- محتوى النموذج -->
+    <div class="product-form-container">
+        <h1 style="text-align: center; margin-bottom: 30px;">➕ إضافة منتج جديد</h1>
+        
+        <form id="productForm">
+            <div class="form-group">
+                <label class="form-label">صورة المنتج</label>
+                <input type="file" id="productImage" accept="image/*" class="form-input">
+                <img id="imagePreview" class="image-preview" alt="معاينة الصورة">
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">اسم المنتج *</label>
+                <input type="text" id="productName" class="form-input" placeholder="أدخل اسم المنتج" required>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">وصف المنتج *</label>
+                <textarea id="productDescription" class="form-textarea" placeholder="أدخل وصف المنتج" required></textarea>
+            </div>
+
+            <div class="form-grid">
+                <div class="form-group">
+                    <label class="form-label">السعر (SDTORA) *</label>
+                    <input type="number" id="productPrice" class="form-input" placeholder="السعر بالعملة" min="1" required>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">الكمية المتاحة *</label>
+                    <input type="number" id="productStock" class="form-input" placeholder="الكمية" min="1" required>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">الفئة</label>
+                <select id="productCategory" class="form-select">
+                    <option value="digital">منتجات رقمية</option>
+                    <option value="physical">منتجات مادية</option>
+                    <option value="services">خدمات</option>
+                    <option value="other">أخرى</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">تفاصيل إضافية</label>
+                <textarea id="productDetails" class="form-textarea" placeholder="مواصفات المنتج، شروط الاستخدام، إلخ..."></textarea>
+            </div>
+
+            <div style="text-align: center; margin-top: 30px;">
+                <button type="submit" class="btn btn-primary" style="padding: 12px 30px;">
+                    <i class="fas fa-plus"></i> نشر المنتج
+                </button>
+                <button type="button" class="btn btn-secondary" onclick="window.location.href='index.html'" style="margin-right: 10px;">
+                    إلغاء
+                </button>
+            </div>
+        </form>
+
+        <div id="formMessage" style="margin-top: 20px; text-align: center;"></div>
+    </div>
+
+    <script>
+        // التحقق من المصادقة والصلاحيات
+        firebase.auth().onAuthStateChanged(async (user) => {
+            if (!user) {
+                window.location.href = 'auth.html';
+                return;
+            }
+
+            // التحقق إذا كان المستخدم مسؤولاً
+            const isAdmin = await isUserAdmin();
+            if (!isAdmin) {
+                document.body.innerHTML = `
+                    <div style="text-align: center; padding: 100px 20px; color: white;">
+                        <h2>⛔ الوصول مرفوض</h2>
+                        <p>ليست لديك صلاحية لإضافة منتجات</p>
+                        <button onclick="window.location.href='index.html'" class="btn btn-primary" style="margin-top: 20px;">
+                            العودة للرئيسية
+                        </button>
+                    </div>
+                `;
+                return;
+            }
+
+            // إظهار معلومات المستخدم
+            document.getElementById('user-info').style.display = 'block';
+            document.getElementById('user-email').textContent = user.email;
+        });
+
+        // معاينة الصورة
+        document.getElementById('productImage').addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            const preview = document.getElementById('imagePreview');
+            
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    preview.src = e.target.result;
+                    preview.style.display = 'block';
+                }
+                reader.readAsDataURL(file);
+            } else {
+                preview.style.display = 'none';
+            }
+        });
+
+        // إرسال النموذج
+        document.getElementById('productForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const submitBtn = this.querySelector('button[type="submit"]');
+            const messageDiv = document.getElementById('formMessage');
+            
+            try {
+                submitBtn.disabled = true;
+                submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> جاري النشر...';
+                
+                const productData = {
+                    name: document.getElementById('productName').value,
+                    description: document.getElementById('productDescription').value,
+                    price: parseFloat(document.getElementById('productPrice').value),
+                    stock: parseInt(document.getElementById('productStock').value),
+                    category: document.getElementById('productCategory').value,
+                    details: document.getElementById('productDetails').value,
+                    createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+                    createdBy: firebase.auth().currentUser.uid,
+                    status: 'active'
+                };
+
+                // رفع الصورة إذا كانت موجودة
+                const imageFile = document.getElementById('productImage').files[0];
+                if (imageFile) {
+                    // هنا يمكنك إضافة كود رفع الصورة إلى Firebase Storage
+                    // مؤقتاً سنخزنها كـ base64
+                    const reader = new FileReader();
+                    reader.onload = function(e) {
+                        productData.image = e.target.result;
+                        saveProduct(productData);
+                    }
+                    reader.readAsDataURL(imageFile);
+                } else {
+                    await saveProduct(productData);
+                }
+
+            } catch (error) {
+                messageDiv.innerHTML = `<p style="color: #f44336;">❌ خطأ: ${error.message}</p>`;
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = '<i class="fas fa-plus"></i> نشر المنتج';
+            }
+        });
+
+        async function saveProduct(productData) {
+            const messageDiv = document.getElementById('formMessage');
+            
+            try {
+                await db.collection('products').add(productData);
+                messageDiv.innerHTML = '<p style="color: #4CAF50;">✅ تم نشر المنتج بنجاح!</p>';
+                
+                setTimeout(() => {
+                    window.location.href = 'index.html';
+                }, 2000);
+                
+            } catch (error) {
+                messageDiv.innerHTML = `<p style="color: #f44336;">❌ خطأ في حفظ المنتج: ${error.message}</p>`;
+                document.querySelector('button[type="submit"]').disabled = false;
+                document.querySelector('button[type="submit"]').innerHTML = '<i class="fas fa-plus"></i> نشر المنتج';
+            }
+        }
+
+        function logout() {
+            firebase.auth().signOut().then(() => {
+                window.location.href = 'index.html';
+            });
+        }
+    </script>
+</body>
+</html>

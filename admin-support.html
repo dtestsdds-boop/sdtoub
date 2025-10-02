@@ -1,0 +1,614 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>إدارة طلبات الدعم - SDTORA</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="style.css">
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+    <script src="firebase-config.js"></script>
+    <style>
+        .admin-container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 30px;
+        }
+
+        .tickets-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .ticket-card {
+            background: var(--win-glass);
+            border-radius: var(--win-radius-lg);
+            padding: 20px;
+            border: 1px solid var(--win-glass-border);
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .ticket-card:hover {
+            transform: translateY(-5px);
+            box-shadow: var(--win-shadow-hover);
+        }
+
+        .ticket-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid var(--win-border);
+        }
+
+        .ticket-status {
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: bold;
+        }
+
+        .status-new { background: #2196F3; color: white; }
+        .status-in-progress { background: #FF9800; color: white; }
+        .status-resolved { background: #4CAF50; color: white; }
+        .status-closed { background: #9E9E9E; color: white; }
+
+        .ticket-priority {
+            padding: 3px 8px;
+            border-radius: 12px;
+            font-size: 11px;
+            margin-right: 8px;
+        }
+
+        .priority-high { background: #f44336; color: white; }
+        .priority-medium { background: #FF9800; color: white; }
+        .priority-low { background: #4CAF50; color: white; }
+
+        .tickets-table {
+            background: var(--win-glass);
+            border-radius: var(--win-radius-lg);
+            padding: 25px;
+            border: 1px solid var(--win-glass-border);
+            margin-top: 30px;
+        }
+
+        .table-header {
+            display: grid;
+            grid-template-columns: 100px 1fr 120px 100px 100px 150px;
+            gap: 15px;
+            padding: 15px;
+            background: rgba(255,255,255,0.05);
+            border-radius: var(--win-radius);
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+
+        .table-row {
+            display: grid;
+            grid-template-columns: 100px 1fr 120px 100px 100px 150px;
+            gap: 15px;
+            padding: 15px;
+            border-bottom: 1px solid var(--win-border);
+            align-items: center;
+            cursor: pointer;
+        }
+
+        .table-row:last-child {
+            border-bottom: none;
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 8px;
+        }
+
+        .btn-small {
+            padding: 6px 12px;
+            font-size: 12px;
+            border-radius: 6px;
+        }
+
+        .stats-cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .stat-card {
+            background: var(--win-glass);
+            padding: 20px;
+            border-radius: var(--win-radius);
+            text-align: center;
+            border: 1px solid var(--win-glass-border);
+        }
+
+        .stat-number {
+            font-size: 2rem;
+            font-weight: bold;
+            margin: 10px 0;
+        }
+
+        /* نافذة الرد */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.8);
+            z-index: 1000;
+            backdrop-filter: blur(10px);
+        }
+
+        .modal-content {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: var(--win-surface);
+            padding: 30px;
+            border-radius: var(--win-radius-lg);
+            border: 1px solid var(--win-glass-border);
+            width: 90%;
+            max-width: 600px;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+
+        .reply-form {
+            margin-top: 20px;
+        }
+
+        .reply-textarea {
+            width: 100%;
+            min-height: 150px;
+            padding: 15px;
+            border-radius: var(--win-radius);
+            border: 1px solid var(--win-border);
+            background: rgba(255,255,255,0.1);
+            color: var(--win-text);
+            margin-bottom: 15px;
+            resize: vertical;
+        }
+
+        .conversation {
+            margin-top: 20px;
+            max-height: 300px;
+            overflow-y: auto;
+            padding: 15px;
+            background: rgba(255,255,255,0.05);
+            border-radius: var(--win-radius);
+        }
+
+        .message {
+            margin-bottom: 15px;
+            padding: 10px;
+            border-radius: var(--win-radius);
+        }
+
+        .message.admin {
+            background: rgba(41, 151, 255, 0.2);
+            border-right: 3px solid var(--win-accent-light);
+        }
+
+        .message.user {
+            background: rgba(255,255,255,0.1);
+            border-left: 3px solid var(--win-text-secondary);
+        }
+
+        .message-time {
+            font-size: 12px;
+            color: var(--win-text-secondary);
+            margin-top: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="taskbar">
+        <button class="start-button" onclick="window.location.href='index.html'">
+            <i class="fas fa-home"></i>
+            الرئيسية
+        </button>
+        <div class="system-tray">
+            <span id="current-time">١٠:٢٤</span>
+        </div>
+    </div>
+
+    <div class="admin-container">
+        <h1 style="text-align: center; margin-bottom: 30px;">🎫 إدارة طلبات الدعم</h1>
+
+        <!-- إحصائيات سريعة -->
+        <div class="stats-cards">
+            <div class="stat-card">
+                <div>طلبات جديدة</div>
+                <div class="stat-number" id="newCount">0</div>
+                <div style="color: #2196F3;">في انتظار المراجعة</div>
+            </div>
+            <div class="stat-card">
+                <div>قيد المعالجة</div>
+                <div class="stat-number" id="progressCount">0</div>
+                <div style="color: #FF9800;">يتم العمل عليها</div>
+            </div>
+            <div class="stat-card">
+                <div>تم الرد</div>
+                <div class="stat-number" id="repliedCount">0</div>
+                <div style="color: #4CAF50;">تم الرد عليها</div>
+            </div>
+            <div class="stat-card">
+                <div>إجمالي الطلبات</div>
+                <div class="stat-number" id="totalCount">0</div>
+                <div style="color: #9C27B0;">جميع الطلبات</div>
+            </div>
+        </div>
+
+        <!-- قائمة الطلبات -->
+        <div class="tickets-table">
+            <h3 style="margin-bottom: 20px;">جميع طلبات الدعم</h3>
+            
+            <div class="table-header">
+                <div>رقم التذكرة</div>
+                <div>الموضوع</div>
+                <div>النوع</div>
+                <div>الأولوية</div>
+                <div>الحالة</div>
+                <div>الإجراءات</div>
+            </div>
+
+            <div id="ticketsContainer">
+                <p style="text-align: center; padding: 20px;">جاري تحميل الطلبات...</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- نافذة الرد -->
+    <div id="replyModal" class="modal">
+        <div class="modal-content">
+            <h3 id="modalTitle">الرد على طلب الدعم</h3>
+            <div id="ticketDetails"></div>
+            
+            <div class="conversation" id="conversation">
+                <!-- المحادثة تظهر هنا -->
+            </div>
+            
+            <div class="reply-form">
+                <textarea id="replyMessage" class="reply-textarea" placeholder="اكتب ردك هنا..."></textarea>
+                <div class="action-buttons">
+                    <button onclick="sendReply()" class="btn btn-primary">إرسال الرد</button>
+                    <button onclick="closeModal()" class="btn btn-secondary">إغلاق</button>
+                    <button onclick="markAsResolved()" class="btn btn-secondary">تم الحل</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentTicketId = null;
+
+        // تحميل طلبات الدعم
+        async function loadSupportTickets() {
+            try {
+                const firestore = firebase.firestore();
+                
+                const snapshot = await firestore.collection('supportTickets')
+                    .orderBy('createdAt', 'desc')
+                    .get();
+
+                const container = document.getElementById('ticketsContainer');
+                
+                if (snapshot.empty) {
+                    container.innerHTML = '<p style="text-align: center; padding: 40px;">لا توجد طلبات دعم حتى الآن</p>';
+                    return;
+                }
+
+                let newCount = 0, progressCount = 0, repliedCount = 0;
+                let html = '';
+
+                snapshot.forEach(doc => {
+                    const ticket = doc.data();
+                    const ticketId = doc.id;
+                    
+                    // إحصاءات الحالة
+                    if (ticket.status === 'new') newCount++;
+                    else if (ticket.status === 'in-progress') progressCount++;
+                    if (ticket.hasReplies) repliedCount++;
+
+                    html += `
+                        <div class="table-row" onclick="openTicket('${ticketId}')">
+                            <div><strong>${ticket.ticketNumber}</strong></div>
+                            <div>
+                                <div><strong>${ticket.fullName}</strong></div>
+                                <div style="color: var(--win-text-secondary); font-size: 12px;">
+                                    ${ticket.email}
+                                </div>
+                                <div style="margin-top: 5px; font-size: 13px;">
+                                    ${ticket.description.substring(0, 50)}...
+                                </div>
+                            </div>
+                            <div>${getInquiryTypeText(ticket.inquiryType)}</div>
+                            <div>
+                                <span class="ticket-priority priority-${ticket.priority}">
+                                    ${getPriorityText(ticket.priority)}
+                                </span>
+                            </div>
+                            <div>
+                                <span class="ticket-status status-${ticket.status}">
+                                    ${getStatusText(ticket.status)}
+                                </span>
+                            </div>
+                            <div class="action-buttons">
+                                <button onclick="event.stopPropagation(); openTicket('${ticketId}')" class="btn-small btn-primary">
+                                    رد
+                                </button>
+                                <button onclick="event.stopPropagation(); updateStatus('${ticketId}', 'in-progress')" class="btn-small btn-secondary">
+                                    معالجة
+                                </button>
+                            </div>
+                        </div>
+                    `;
+                });
+
+                container.innerHTML = html;
+                
+                // تحديث الإحصائيات
+                document.getElementById('newCount').textContent = newCount;
+                document.getElementById('progressCount').textContent = progressCount;
+                document.getElementById('repliedCount').textContent = repliedCount;
+                document.getElementById('totalCount').textContent = snapshot.size;
+
+            } catch (error) {
+                console.error('Error loading tickets:', error);
+                document.getElementById('ticketsContainer').innerHTML = `
+                    <p style="color: #f44336; text-align: center;">
+                        ❌ خطأ في تحميل الطلبات: ${error.message}
+                    </p>
+                `;
+            }
+        }
+
+        // فتح التذكرة للرد
+        async function openTicket(ticketId) {
+            currentTicketId = ticketId;
+            const firestore = firebase.firestore();
+            
+            try {
+                const ticketDoc = await firestore.collection('supportTickets').doc(ticketId).get();
+                const ticket = ticketDoc.data();
+                
+                // تحديث حالة التذكرة إلى "قيد المعالجة"
+                await firestore.collection('supportTickets').doc(ticketId).update({
+                    status: 'in-progress',
+                    lastUpdated: firebase.firestore.FieldValue.serverTimestamp()
+                });
+
+                // عرض تفاصيل التذكرة
+                document.getElementById('ticketDetails').innerHTML = `
+                    <div style="background: rgba(255,255,255,0.05); padding: 15px; border-radius: var(--win-radius); margin-bottom: 15px;">
+                        <p><strong>رقم التذكرة:</strong> ${ticket.ticketNumber}</p>
+                        <p><strong>الاسم:</strong> ${ticket.fullName}</p>
+                        <p><strong>البريد:</strong> ${ticket.email}</p>
+                        <p><strong>النوع:</strong> ${getInquiryTypeText(ticket.inquiryType)}</p>
+                        <p><strong>الوصف:</strong> ${ticket.description}</p>
+                    </div>
+                `;
+
+                // تحميل المحادثة
+                await loadConversation(ticketId);
+                
+                // فتح النافذة
+                document.getElementById('replyModal').style.display = 'block';
+                
+            } catch (error) {
+                console.error('Error opening ticket:', error);
+                alert('❌ خطأ في فتح التذكرة: ' + error.message);
+            }
+        }
+
+        // تحميل المحادثة
+        async function loadConversation(ticketId) {
+            const firestore = firebase.firestore();
+            const conversationDiv = document.getElementById('conversation');
+            
+            try {
+                // الرسالة الأصلية من المستخدم
+                const ticketDoc = await firestore.collection('supportTickets').doc(ticketId).get();
+                const ticket = ticketDoc.data();
+                
+                let conversationHTML = `
+                    <div class="message user">
+                        <strong>${ticket.fullName}</strong>
+                        <p>${ticket.description}</p>
+                        <div class="message-time">
+                            ${ticket.createdAt ? new Date(ticket.createdAt.toDate()).toLocaleString('ar-EG') : 'قبل قليل'}
+                        </div>
+                    </div>
+                `;
+
+                // الردود السابقة
+                const repliesSnapshot = await firestore.collection('supportReplies')
+                    .where('ticketId', '==', ticketId)
+                    .orderBy('createdAt', 'asc')
+                    .get();
+
+                repliesSnapshot.forEach(doc => {
+                    const reply = doc.data();
+                    conversationHTML += `
+                        <div class="message admin">
+                            <strong>👨‍💼 فريق الدعم</strong>
+                            <p>${reply.message}</p>
+                            <div class="message-time">
+                                ${reply.createdAt ? new Date(reply.createdAt.toDate()).toLocaleString('ar-EG') : 'قبل قليل'}
+                            </div>
+                        </div>
+                    `;
+                });
+
+                conversationDiv.innerHTML = conversationHTML;
+                conversationDiv.scrollTop = conversationDiv.scrollHeight;
+                
+            } catch (error) {
+                console.error('Error loading conversation:', error);
+                conversationDiv.innerHTML = '<p>❌ خطأ في تحميل المحادثة</p>';
+            }
+        }
+
+        // إرسال رد
+        async function sendReply() {
+            const message = document.getElementById('replyMessage').value.trim();
+            
+            if (!message) {
+                alert('❌ الرجاء كتابة رسالة الرد');
+                return;
+            }
+
+            if (!currentTicketId) {
+                alert('❌ لا توجد تذكرة مفتوحة');
+                return;
+            }
+
+            const firestore = firebase.firestore();
+            
+            try {
+                // حفظ الرد في مجموعة منفصلة
+                await firestore.collection('supportReplies').add({
+                    ticketId: currentTicketId,
+                    message: message,
+                    createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+                    repliedBy: 'admin', // يمكنك تغيير هذا لاسم المسؤول
+                    type: 'admin_reply'
+                });
+
+                // تحديث التذكرة للإشارة إلى وجود ردود
+                await firestore.collection('supportTickets').doc(currentTicketId).update({
+                    hasReplies: true,
+                    lastUpdated: firebase.firestore.FieldValue.serverTimestamp(),
+                    lastRepliedAt: firebase.firestore.FieldValue.serverTimestamp()
+                });
+
+                // تفريغ حقل الرد
+                document.getElementById('replyMessage').value = '';
+                
+                // إعادة تحميل المحادثة
+                await loadConversation(currentTicketId);
+                
+                // إعادة تحميل قائمة التذاكر
+                loadSupportTickets();
+                
+                alert('✅ تم إرسال الرد بنجاح!');
+                
+            } catch (error) {
+                console.error('Error sending reply:', error);
+                alert('❌ خطأ في إرسال الرد: ' + error.message);
+            }
+        }
+
+        // تم الحل
+        async function markAsResolved() {
+            if (!currentTicketId) return;
+
+            const firestore = firebase.firestore();
+            
+            try {
+                await firestore.collection('supportTickets').doc(currentTicketId).update({
+                    status: 'resolved',
+                    lastUpdated: firebase.firestore.FieldValue.serverTimestamp(),
+                    resolvedAt: firebase.firestore.FieldValue.serverTimestamp()
+                });
+
+                closeModal();
+                loadSupportTickets();
+                alert('✅ تم标记التذكرة كمحلولة!');
+                
+            } catch (error) {
+                console.error('Error marking as resolved:', error);
+                alert('❌ خطأ في标记الحالة: ' + error.message);
+            }
+        }
+
+        // إغلاق النافذة
+        function closeModal() {
+            document.getElementById('replyModal').style.display = 'none';
+            currentTicketId = null;
+        }
+
+        // دوال مساعدة
+        function getInquiryTypeText(type) {
+            const types = {
+                'technical': 'تقني',
+                'account': 'حساب',
+                'wallet': 'محفظة',
+                'transaction': 'معاملة',
+                'general': 'عام',
+                'suggestion': 'اقتراح'
+            };
+            return types[type] || type;
+        }
+
+        function getPriorityText(priority) {
+            const priorities = {
+                'high': 'عالية',
+                'medium': 'متوسطة',
+                'low': 'منخفضة'
+            };
+            return priorities[priority] || priority;
+        }
+
+        function getStatusText(status) {
+            const statuses = {
+                'new': 'جديد',
+                'in-progress': 'قيد المعالجة',
+                'resolved': 'تم الحل',
+                'closed': 'مغلق'
+            };
+            return statuses[status] || status;
+        }
+
+        // تحديث حالة التذكرة
+        async function updateStatus(ticketId, newStatus) {
+            try {
+                const firestore = firebase.firestore();
+                
+                await firestore.collection('supportTickets').doc(ticketId).update({
+                    status: newStatus,
+                    lastUpdated: firebase.firestore.FieldValue.serverTimestamp()
+                });
+                
+                alert('✅ تم تحديث حالة التذكرة');
+                loadSupportTickets();
+                
+            } catch (error) {
+                alert('❌ خطأ في تحديث الحالة: ' + error.message);
+            }
+        }
+
+        // تحديث الوقت
+        function updateTime() {
+            document.getElementById('current-time').textContent = new Date().toLocaleTimeString('ar-EG');
+        }
+
+        // إغلاق النافذة عند النقر خارجها
+        window.onclick = function(event) {
+            const modal = document.getElementById('replyModal');
+            if (event.target === modal) {
+                closeModal();
+            }
+        }
+
+        // تحميل الطلبات عند فتح الصفحة
+        setTimeout(() => {
+            loadSupportTickets();
+            setInterval(loadSupportTickets, 30000); // تحديث كل 30 ثانية
+        }, 1000);
+
+        setInterval(updateTime, 1000);
+        updateTime();
+    </script>
+</body>
+</html>

@@ -4,13 +4,168 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>SDTORA - عملة المستقبل</title>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- الروابط مرتبة بشكل صحيح -->
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&display=swap" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="style.css">
+    
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
     <script src="firebase-config.js"></script>
+
+    <style>
+        /* تحسينات قسم المنتجات فقط */
+        .products-section {
+            padding: 80px 0;
+            background: linear-gradient(135deg, #0a0a0a 0%, #1a1a2e 50%, #16213e 100%);
+            position: relative;
+        }
+
+        .section-header {
+            text-align: center;
+            margin-bottom: 50px;
+        }
+
+        .section-header h2 {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 3rem;
+            font-weight: 900;
+            background: linear-gradient(135deg, #fff 0%, #a8edea 50%, #fed6e3 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 15px;
+        }
+
+        .section-header p {
+            font-size: 1.3rem;
+            color: #b8b8b8;
+            line-height: 1.6;
+        }
+
+        .products-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 25px;
+            margin: 0 auto;
+            max-width: 1200px;
+            padding: 0 20px;
+        }
+
+        .product-card {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 15px;
+            padding: 20px;
+            transition: all 0.3s ease;
+            position: relative;
+        }
+
+        .product-card:hover {
+            transform: translateY(-5px);
+            border-color: rgba(102, 126, 234, 0.3);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+        }
+
+        .product-image-container {
+            position: relative;
+            width: 100%;
+            height: 180px;
+            border-radius: 10px;
+            overflow: hidden;
+            margin-bottom: 15px;
+            background: rgba(0, 0, 0, 0.3);
+        }
+
+        .product-image {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .product-image-placeholder {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            font-size: 2.5rem;
+        }
+
+        .product-name {
+            font-size: 1.2rem;
+            font-weight: 700;
+            color: white;
+            margin-bottom: 10px;
+        }
+
+        .product-description {
+            color: #b8b8b8;
+            margin-bottom: 15px;
+            line-height: 1.5;
+        }
+
+        .product-price {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: #64ffda;
+            margin-bottom: 10px;
+        }
+
+        .product-stock {
+            font-size: 0.9rem;
+            padding: 5px 10px;
+            border-radius: 10px;
+            background: rgba(255, 255, 255, 0.1);
+            display: inline-block;
+            margin-bottom: 15px;
+        }
+
+        .stock-low {
+            background: rgba(255, 107, 107, 0.2);
+            color: #ff6b6b;
+        }
+
+        .buy-button {
+            width: 100%;
+            padding: 12px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .buy-button:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.3);
+        }
+
+        .buy-button:disabled {
+            background: #666;
+            cursor: not-allowed;
+        }
+
+        @media (max-width: 768px) {
+            .products-grid {
+                grid-template-columns: 1fr;
+                padding: 0 15px;
+            }
+            
+            .section-header h2 {
+                font-size: 2.2rem;
+            }
+        }
+    </style>
 </head>
 <body>
     <!-- تأثيرات الخلفية -->
@@ -32,14 +187,17 @@
             <div class="taskbar-icon" onclick="window.location.href='wallet.html'">
                 <i class="fas fa-wallet"></i>
             </div>
+            <div class="taskbar-icon" onclick="window.location.href='orders.html'">
+                <i class="fas fa-shopping-bag"></i>
+            </div>
         </div>
         <div class="system-tray">
             <div id="user-info" style="display: none;">
                 <span id="user-email"></span>
-                <button onclick="logout()" class="btn-secondary" style="padding: 5px 10px; margin-right: 10px;">تسجيل خروج</button>
+                <button onclick="logout()" class="btn-secondary">تسجيل خروج</button>
             </div>
             <div id="auth-buttons">
-                <button onclick="window.location.href='auth.html'" class="btn-primary" style="padding: 5px 10px;">تسجيل الدخول</button>
+                <button onclick="window.location.href='auth.html'" class="btn-primary">تسجيل الدخول</button>
             </div>
         </div>
     </div>
@@ -71,7 +229,7 @@
                 <p>SDTORA هي عملة رقمية مبتكرة تهدف إلى إحداث ثورة في عالم المدفوعات اللامركزية. انضم إلى مجتمعنا المتنامي وكن جزءًا من مستقبل التمويل.</p>
                 <div class="hero-buttons">
                     <button class="btn btn-primary" onclick="window.location.href='wallet.html'">ابدأ الآن</button>
-                    <button class="btn btn-secondary">تعرف أكثر</button>
+                    <button class="btn btn-secondary" onclick="window.location.href='about.html'">تعرف أكثر</button>
                 </div>
             </div>
             <div class="hero-visual">
@@ -82,22 +240,47 @@
             </div>
         </section>
 
-        <!-- باقي المحتوى -->
+        <!-- قسم المنتجات المحسن -->
+        <section class="products-section">
+            <div class="section-header">
+                <h2>🛒 متجر SDTORA</h2>
+                <p>اشترِ باستخدام عملاتك الرقمية واستمتع بتجربة تسوق فريدة وآمنة</p>
+            </div>
+            
+            <div class="products-grid" id="productsGrid">
+                <div class="loading">
+                    <div class="loading-spinner"></div>
+                    جاري تحميل المنتجات...
+                </div>
+            </div>
+
+            <!-- زر إضافة منتج جديد -->
+            <div id="adminProductSection" class="admin-section" style="display: none; text-align: center; margin-top: 40px;">
+                <button class="add-product-btn" onclick="window.location.href='add-product.html'" style="background: linear-gradient(135deg, #00b894, #00a085); color: white; border: none; padding: 12px 25px; border-radius: 8px; font-size: 1rem; cursor: pointer;">
+                    <i class="fas fa-plus"></i> إضافة منتج جديد
+                </button>
+            </div>
+        </section>
     </div>
 
     <script>
+        // تعريف db
+        let db;
+        if (typeof db === 'undefined') {
+            db = firebase.firestore();
+        }
+
         // التحقق من حالة المستخدم
         firebase.auth().onAuthStateChanged((user) => {
             const userInfo = document.getElementById('user-info');
             const authButtons = document.getElementById('auth-buttons');
             
             if (user) {
-                // مستخدم مسجل الدخول
                 userInfo.style.display = 'block';
                 authButtons.style.display = 'none';
                 document.getElementById('user-email').textContent = user.email;
+                checkAdminAccess();
             } else {
-                // مستخدم غير مسجل
                 userInfo.style.display = 'none';
                 authButtons.style.display = 'block';
             }
@@ -109,6 +292,226 @@
                 window.location.href = 'index.html';
             });
         }
+
+        // تحميل المنتجات
+        async function loadProducts() {
+            try {
+                const snapshot = await db.collection('products')
+                    .where('status', '==', 'active')
+                    .orderBy('createdAt', 'desc')
+                    .limit(12)
+                    .get();
+                
+                const container = document.getElementById('productsGrid');
+                
+                if (snapshot.empty) {
+                    container.innerHTML = `
+                        <div class="loading" style="grid-column: 1 / -1;">
+                            <i class="fas fa-box-open" style="font-size: 3rem; margin-bottom: 20px; color: #666;"></i>
+                            <div>لا توجد منتجات متاحة حالياً</div>
+                        </div>
+                    `;
+                    return;
+                }
+                
+                let html = '';
+                
+                snapshot.forEach((doc) => {
+                    const product = doc.data();
+                    const stockClass = product.stock <= 3 ? 'stock-low' : '';
+                    const isOutOfStock = product.stock <= 0;
+                    
+                    html += `
+                        <div class="product-card">
+                            <div class="product-image-container">
+                                ${product.image ? 
+                                    `<img src="${product.image}" alt="${product.name}" class="product-image">` : 
+                                    `<div class="product-image-placeholder">
+                                         <i class="fas fa-shopping-bag"></i>
+                                     </div>`
+                                }
+                            </div>
+                            <h3 class="product-name">${product.name}</h3>
+                            <p class="product-description">${product.description || 'لا يوجد وصف متاح'}</p>
+                            <div class="product-price">${product.price} SDTORA</div>
+                            <div class="product-stock ${stockClass}">
+                                ${isOutOfStock ? '⛔ غير متوفر' : `المتبقي: ${product.stock} وحدة`}
+                            </div>
+                            <button class="buy-button" onclick="buyProduct('${doc.id}')" ${isOutOfStock ? 'disabled' : ''}>
+                                ${isOutOfStock ? 'غير متوفر' : '🛒 شراء الآن'}
+                            </button>
+                        </div>
+                    `;
+                });
+                
+                container.innerHTML = html;
+                
+            } catch (error) {
+                console.error('Error loading products:', error);
+                document.getElementById('productsGrid').innerHTML = `
+                    <div class="loading" style="grid-column: 1 / -1;">
+                        <i class="fas fa-exclamation-triangle" style="font-size: 3rem; margin-bottom: 20px; color: #ff6b6b;"></i>
+                        <div>خطأ في تحميل المنتجات</div>
+                    </div>
+                `;
+            }
+        }
+
+        // التحقق من صلاحيات المسؤول
+        async function checkAdminAccess() {
+            try {
+                const user = firebase.auth().currentUser;
+                if (user) {
+                    const isAdmin = await isUserAdmin(user.uid);
+                    if (isAdmin) {
+                        document.getElementById('adminProductSection').style.display = 'block';
+                    }
+                }
+            } catch (error) {
+                console.error('Error checking admin access:', error);
+            }
+        }
+
+        // التحقق من صلاحيات المسؤول
+        async function isUserAdmin(userId) {
+            try {
+                const userDoc = await db.collection('users').doc(userId).get();
+                if (userDoc.exists) {
+                    const userData = userDoc.data();
+                    return userData.role === 'admin' || userData.isAdmin === true;
+                }
+                return false;
+            } catch (error) {
+                console.error('Error checking admin status:', error);
+                return false;
+            }
+        }
+
+        // دالة الشراء
+        async function buyProduct(productId) {
+            const user = firebase.auth().currentUser;
+            if (!user) {
+                alert('⚠️ يرجى تسجيل الدخول أولاً');
+                window.location.href = 'auth.html';
+                return;
+            }
+            
+            try {
+                const productDoc = await db.collection('products').doc(productId).get();
+                if (!productDoc.exists) {
+                    alert('❌ المنتج غير موجود');
+                    return;
+                }
+                
+                const product = productDoc.data();
+                
+                if (product.stock <= 0) {
+                    alert('⛔ المنتج غير متوفر حالياً');
+                    return;
+                }
+                
+                const walletDoc = await db.collection('wallets').doc(user.uid).get();
+                if (!walletDoc.exists) {
+                    alert('❌ المحفظة غير موجودة');
+                    return;
+                }
+                
+                const walletData = walletDoc.data();
+                const userBalance = walletData.balance || 0;
+                
+                if (userBalance < product.price) {
+                    alert(`❌ رصيدك غير كافي. تحتاج ${product.price} SDTORA بينما رصيدك ${userBalance} SDTORA`);
+                    return;
+                }
+                
+                const confirmPurchase = confirm(
+                    `🛒 تأكيد الشراء\n\n` +
+                    `المنتج: ${product.name}\n` +
+                    `السعر: ${product.price} SDTORA\n` +
+                    `رصيدك الحالي: ${userBalance} SDTORA\n\n` +
+                    `هل تريد متابعة الشراء؟`
+                );
+                
+                if (!confirmPurchase) return;
+                
+                await processPurchase(user.uid, productId, product);
+                
+            } catch (error) {
+                console.error('Error in purchase:', error);
+                alert('❌ حدث خطأ أثناء عملية الشراء: ' + error.message);
+            }
+        }
+
+        // معالجة عملية الشراء
+        async function processPurchase(userId, productId, product) {
+            const orderId = generateOrderId();
+            
+            try {
+                await db.runTransaction(async (transaction) => {
+                    const productDoc = await transaction.get(db.collection('products').doc(productId));
+                    const currentProduct = productDoc.data();
+                    
+                    if (!currentProduct || currentProduct.stock <= 0) {
+                        throw new Error('المنتج غير متوفر حالياً');
+                    }
+                    
+                    const walletDoc = await transaction.get(db.collection('wallets').doc(userId));
+                    if (!walletDoc.exists) {
+                        throw new Error('المحفظة غير موجودة');
+                    }
+                    
+                    const walletData = walletDoc.data();
+                    const currentBalance = walletData.balance || 0;
+                    
+                    if (currentBalance < product.price) {
+                        throw new Error('رصيدك غير كافي');
+                    }
+                    
+                    const newBalance = currentBalance - product.price;
+                    transaction.update(db.collection('wallets').doc(userId), {
+                        balance: newBalance,
+                        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+                    });
+                    
+                    const newStock = currentProduct.stock - 1;
+                    transaction.update(db.collection('products').doc(productId), {
+                        stock: newStock
+                    });
+                    
+                    const orderData = {
+                        orderId: orderId,
+                        userId: userId,
+                        userEmail: walletData.email || firebase.auth().currentUser.email,
+                        productId: productId,
+                        productName: product.name,
+                        productPrice: product.price,
+                        status: 'completed',
+                        createdAt: firebase.firestore.FieldValue.serverTimestamp()
+                    };
+                    
+                    transaction.set(db.collection('orders').doc(orderId), orderData);
+                });
+                
+                alert(`✅ تم الشراء بنجاح!\n\nطلبك: ${product.name}\nرقم الطلب: ${orderId}`);
+                loadProducts();
+                
+            } catch (error) {
+                console.error('Transaction error:', error);
+                alert('❌ حدث خطأ أثناء المعاملة: ' + error.message);
+            }
+        }
+
+        // إنشاء رقم طلب فريد
+        function generateOrderId() {
+            const timestamp = Date.now().toString(36);
+            const random = Math.random().toString(36).substr(2, 5);
+            return `ORD-${timestamp}-${random}`.toUpperCase();
+        }
+
+        // تحميل المنتجات عند فتح الصفحة
+        document.addEventListener('DOMContentLoaded', function() {
+            loadProducts();
+        });
     </script>
 </body>
 </html>
